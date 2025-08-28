@@ -13,9 +13,12 @@ int main() {
 #include "CustomSocket.h"
 #include "MultiLogger.h"
 #include "../pids/Mode1Pids.h"
+#include "../pids/TroubleCodes.h"
 
 #ifdef ARDUINO
+
 #include "ArduinoSTL.h"
+
 #endif
 
 #include <vector>
@@ -34,10 +37,13 @@ class ReceiverFrames {
             s.receive(frame);
 
             currentMode = nullptr;
-            if (frame.data[1] == 1) {
+            uint8_t byteMode = frame.data[1];
+            if (byteMode == 1 || byteMode == 2) {
                 currentMode = new Mode1();
-            } else if (frame.data[1] == 3) {
+            } else if (byteMode == 3 || byteMode == 7 || byteMode == 0x0A) {
                 currentMode = new Mode3();
+            } else if (byteMode == 4) {
+                currentMode = new Mode4();
             }
             return currentMode;
         }
@@ -46,21 +52,26 @@ class ReceiverFrames {
 class IObd2Modes {
 
     public:
-
-        virtual std::vector<DecodedItem> Decodify(can_frame &frame);
+        virtual std::vector<DecodedItem> Decodify(uint8_t* data, uint8_t len);
 };
 
 class Mode1: public IObd2Modes {
     public:
-
-        std::vector<DecodedItem> Decodify(can_frame &frame) override;
+        std::vector<DecodedItem> Decodify(uint8_t* data, uint8_t len) override;
 
 };
 
 class Mode3: public IObd2Modes {
     public:
+        std::vector<DecodedItem> Decodify(uint8_t* data, uint8_t len) override;
+    private:
+        std::string DecodifyDTC(uint8_t *dtc);
 
-        std::vector<DecodedItem> Decodify(can_frame &frame) override;
+};
+
+class Mode4: public IObd2Modes {
+    public:
+        std::vector<DecodedItem> Decodify(uint8_t* data, uint8_t len) override;
 
 };
 

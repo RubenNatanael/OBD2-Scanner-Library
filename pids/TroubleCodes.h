@@ -1,11 +1,64 @@
 #ifndef TROUBLE_CODE
 #define TROUBLE_CODE
 
+#include <string>
+
 #ifdef ARDUINO
-    // Don't include DTC description(Memory limitation)
+
+// Don't include DTC description(Memory limitation)
+std::string Parse(std::string &DtcCode) {
+    return DtcCode;
+}
+
 #else
 
+const size_t troubleCodesCount = sizeof(troubleCodes) / sizeof(troubleCodes[0]);
+
+
+// PBCU
+
 #include <string>
+
+int letterOrder(char c) {
+    switch(c) {
+        case 'P': return 0;
+        case 'B': return 1;
+        case 'C': return 2;
+        case 'U': return 3;
+        default: return 4;
+    }
+}
+
+int FindDtcInList(int start, int end, const std::string &DtcCode) {
+    if (start >= end) return -1;
+
+    int mid = (start + end) / 2;
+    const std::string &current = troubleCodes[mid];
+
+    int currentLetterOrder = letterOrder(current[0]);
+    int searchLetterOrder  = letterOrder(DtcCode[0]);
+
+    if (currentLetterOrder < searchLetterOrder) {
+        return FindDtcInList(mid + 1, end, DtcCode);
+    } else if (currentLetterOrder > searchLetterOrder) {
+        return FindDtcInList(start, mid, DtcCode);
+    } else {
+        std::string currentNum = current.substr(1, 5);
+        std::string searchNum  = DtcCode.substr(1, 5);
+
+        if (currentNum == searchNum) return mid;
+        else if (currentNum < searchNum)
+            return FindDtcInList(mid + 1, end, DtcCode);
+        else
+            return FindDtcInList(start, mid, DtcCode);
+    }
+}
+
+
+std::string Parse(std::string &DtcCode) {
+    int DtcDescriptionIndex = FindDtcInList(0, troubleCodesCount, DtcCode);
+    return DtcDescriptionIndex !=1 ? troubleCodes[DtcDescriptionIndex] : "DTC NOT Found";
+}
 
 const std::string troubleCodes[] = {
     "P0000: No trouble code",
@@ -3754,8 +3807,6 @@ const std::string troubleCodes[] = {
     "U2195: SCP (J1850) Invalid Data from SCLM",
     "U2500: (CAN) Lack of Acknowledgement From Engine Management",
 };
-
-const size_t troubleCodesCount = sizeof(troubleCodes) / sizeof(troubleCodes[0]);
 
 #endif
 
