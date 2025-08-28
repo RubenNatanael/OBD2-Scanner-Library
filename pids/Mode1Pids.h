@@ -1,0 +1,600 @@
+#include <stdint.h>
+#include <vector>
+#include <string>
+
+struct DecodedItem {
+    std::string label;  // Ej: "RPM"
+    std::string value;  // Ej: "2300 rpm"
+};
+
+using DecoderFunc = std::vector<DecodedItem> (*)(const uint8_t* data, uint8_t len);
+
+struct PIDEntry {
+    uint8_t pid;
+    DecoderFunc decoder;
+};
+
+// PID 0x00: Supported PIDs 01–20
+std::vector<DecodedItem> DecodePID00(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
+        for (int bit = 7; bit >= 0; --bit) {
+            if (data[byteIndex] & (1 << bit)) {
+                result.push_back({
+                    "Supported PID",
+                    std::to_string(byteIndex*8 + (8-bit))
+                });
+            }
+        }
+    }
+    return result;
+}
+
+// PID 0x01: Monitor status since DTCs cleared
+std::vector<DecodedItem> DecodePID01(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len < 4) return result;
+
+    uint8_t A = data[0], B = data[1], C = data[2], D = data[3];
+
+    bool milOn = (A & 0x80) != 0;
+    int dtcCount = A & 0x7F;
+    bool isDiesel = (B & 0x08) != 0;
+    bool commonComplete = ((B >> 4) & 0x07) == (B & 0x07);
+    bool engineComplete = C == D;
+
+    result.push_back({"MIL", milOn ? "ON" : "OFF"});
+    result.push_back({"DTC Count", std::to_string(dtcCount)});
+    result.push_back({"Engine Type", isDiesel ? "Diesel" : "Gasoline"});
+    result.push_back({"Common Tests Completed", commonComplete ? "Yes" : "No"});
+    result.push_back({"Engine Tests Completed", engineComplete ? "Yes" : "No"});
+
+    return result;
+}
+
+// PID 0x02: DTC that causes freez frame
+std::vector<DecodedItem> DecodePID02(const uint8_t* data, uint8_t len) {
+    // TODO when implemented Mode 3(parse DTCs)
+}
+
+//TODO - verify
+// PID 0x03: Fuel System Status
+std::vector<DecodedItem> DecodePID03(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    std::string text = "";
+    switch (data[0])
+    {
+    case 0:
+        text = "0 	The motor is off";
+        break;
+    case 1:
+        text = "1 	Open loop due to insufficient engine temperature";
+        break;
+    case 2:
+        text = "2 	Closed loop, using oxygen sensor feedback to determine fuel mix";
+        break;
+    case 4:
+        text = "4 	Open loop due to engine load OR fuel cut due to decelerationf";
+        break;
+    case 8:
+        text = "8 	Open loop due to system failure";
+        break;
+    case 16:
+        text = "16 	Closed loop, using at least one oxygen sensor but there is a fault in the feedback system ";
+        break;
+    
+    default:
+        text = data[0] + "Invalide response";
+        break;
+    }
+    result.push_back({"Fuel System Status", text});
+    return result;
+}
+
+// PID 0x04: Calculate Engine Load
+std::vector<DecodedItem> DecodePID04(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    float procentage = (float)data[0] * 2.55;
+    result.push_back({"Engine Load", std::to_string(procentage) + " %"});
+    return result;
+}
+
+// PID 0x05: Engine Coolant Temp
+std::vector<DecodedItem> DecodePID05(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    result.push_back({"Coolant Temp", std::to_string((int)data[0]-40) + " °C"});
+    return result;
+}
+
+// PID 0x06: Short term fuel trim (STFT)—Bank 1 
+std::vector<DecodedItem> DecodePID06(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    float procentage = ((float)data[0] / 1.28) - 100;
+    result.push_back({"STFT-Bank 1", std::to_string(procentage) + " %"});
+    return result;
+}
+
+// PID 0x07: Long term fuel trim (LTFT)—Bank 1 
+std::vector<DecodedItem> DecodePID07(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    float procentage = ((float)data[0] / 1.28) - 100;
+    result.push_back({"LTFT-Bank 1", std::to_string(procentage) + " %"});
+    return result;
+}
+
+// PID 0x08: Short term fuel trim (STFT)—Bank 2
+std::vector<DecodedItem> DecodePID08(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    float procentage = ((float)data[0] / 1.28) - 100;
+    result.push_back({"STFT-Bank 1", std::to_string(procentage) + " %"});
+    return result;
+}
+
+// PID 0x08: Long term fuel trim (LTFT)—Bank 2
+std::vector<DecodedItem> DecodePID09(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    float procentage = ((float)data[0] / 1.28) - 100;
+    result.push_back({"LTFT-Bank 1", std::to_string(procentage) + " %"});
+    return result;
+}
+
+// PID 0x0A: Fuel Presure
+std::vector<DecodedItem> DecodePID0A(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    int presure = data[0] * 3;
+    result.push_back({"Fuel Presure", std::to_string(presure) + " kPa"});
+    return result;
+}
+
+// PID 0x0B: Intake manifold absolute pressure 
+std::vector<DecodedItem> DecodePID0B(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    result.push_back({"Intake manifold absolute pressure", std::to_string(data[0]) + " kPa"});
+    return result;
+}
+
+// PID 0x0C: Engine RPM
+std::vector<DecodedItem> DecodePID0C(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    int raw = (data[0] << 8) | data[1];
+    float rpm = raw / 4.0f;
+    result.push_back({"RPM", std::to_string(rpm) + " rpm"});
+    return result;
+}
+
+// PID 0x0D: Vehicle Speed
+std::vector<DecodedItem> DecodePID0D(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    result.push_back({"Speed", std::to_string(data[0]) + " km/h"});
+    return result;
+}
+
+// PID 0x0E: Timing Advance
+std::vector<DecodedItem> DecodePID0E(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        DecodedItem r;
+        r.label = "Timing Advance";
+        r.value = std::to_string(data[0]/2.0f - 64) + " °BTDC"; // formula per SAE J1979
+        result.push_back(r);
+    }
+    return result;
+}
+
+// PID 0x0F: Intake Air Temp
+std::vector<DecodedItem> DecodePID0F(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        result.push_back({"Intake Air Temp", std::to_string(data[0] - 40) + " °C"});
+    }
+    return result;
+}
+
+// PID 0x10: Mass Air Flow Rate
+std::vector<DecodedItem> DecodePID10(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        float maf = ((data[0] << 8) | data[1]) / 100.0f;
+        result.push_back({"Mass Air Flow Rate", std::to_string(maf) + " g/s"});
+    }
+    return result;
+}
+
+// PID 0x11: Throttle Position
+std::vector<DecodedItem> DecodePID11(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        result.push_back({"Throttle Position", std::to_string(data[0] * 100.0f / 255.0f) + " %"});
+    }
+    return result;
+}
+
+// PID 0x12: Commanded Secondary Air Status
+std::vector<DecodedItem> DecodePID12(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        std::string v = (data[0] == 0) ? "Not Commanded" : "Commanded";
+        result.push_back({"Secondary Air Status", v});
+    }
+    return result;
+}
+
+// PID 0x13: O2 Sensor Present Bank 1 Sensor 1
+std::vector<DecodedItem> DecodePID13(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) result.push_back({"O2 Sensor B1 S1", (data[0] ? "Present" : "Not Present")});
+    return result;
+}
+
+// PID 0x14 - 1B: O2 Sensor 1 to 8
+std::vector<DecodedItem> DecodePID14to1B(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        float voltage = data[0] / 200.0f; 
+        std::string stft = (data[1] == 0xFF) ? "Not used" 
+                                               : std::to_string((100.0f/128.0f)*data[1] - 100.0f) + " %";
+        result.push_back({"O2 Sensor B1 S" , "Voltage: " + std::to_string(voltage) + " V, STFT: " + stft});
+    }
+    return result;
+}
+
+// PID 0x1F: Run time since engine start
+std::vector<DecodedItem> DecodePID1F(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int seconds = (data[0] << 8) | data[1];
+        result.push_back({"Run Time Since Engine Start", std::to_string(seconds) + " s"});
+    }
+    return result;
+}
+
+// PID 0x20: PIDs supported [21–40]
+std::vector<DecodedItem> DecodePID20(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
+        for (int bit = 7; bit >= 0; --bit) {
+            if (data[byteIndex] & (1 << bit)) {
+                result.push_back({"Supported PID", std::to_string(byteIndex * 8 + (8 - bit) + 0x20)});
+            }
+        }
+    }
+    return result;
+}
+
+// PID 0x21: Distance traveled with MIL on
+std::vector<DecodedItem> DecodePID21(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int km = (data[0] << 8) | data[1];
+        result.push_back({"Distance with MIL On", std::to_string(km) + " km"});
+    }
+    return result;
+}
+
+// PID 0x22: Fuel Rail Pressure (relative to manifold vacuum)
+std::vector<DecodedItem> DecodePID22(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int kPa = ((data[0] << 8) | data[1]) * 0.079; // spec: (A*256 + B) * 0.079 kPa
+        result.push_back({"Fuel Rail Pressure (Relative)", std::to_string(kPa) + " kPa"});
+    }
+    return result;
+}
+
+// PID 0x23: Fuel Rail Gauge Pressure (diesel, gasoline direct injection)
+std::vector<DecodedItem> DecodePID23(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int kPa = ((data[0] << 8) | data[1]) * 10; // spec: (A*256 + B) * 10 kPa
+        result.push_back({"Fuel Rail Gauge Pressure", std::to_string(kPa) + " kPa"});
+    }
+    return result;
+}
+
+// PID 0x2C: Commanded EGR
+std::vector<DecodedItem> DecodePID2C(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float percent = data[0] * 100.0f / 255.0f;
+        result.push_back({"Commanded EGR", std::to_string(percent) + " %"});
+    }
+    return result;
+}
+
+// PID 0x2D: EGR Error
+std::vector<DecodedItem> DecodePID2D(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float percent = (data[0] * 100.0f / 128.0f) - 100.0f;
+        result.push_back({"EGR Error", std::to_string(percent) + " %"});
+    }
+    return result;
+}
+
+// PID 0x2E: Commanded Evaporative Purge
+std::vector<DecodedItem> DecodePID2E(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float percent = data[0] * 100.0f / 255.0f;
+        result.push_back({"Commanded Evaporative Purge", std::to_string(percent) + " %"});
+    }
+    return result;
+}
+
+// PID 0x2F: Fuel Tank Level Input
+std::vector<DecodedItem> DecodePID2F(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float percent = data[0] * 100.0f / 255.0f;
+        result.push_back({"Fuel Tank Level Input", std::to_string(percent) + " %"});
+    }
+    return result;
+}
+
+// PID 0x30: Warm-ups Since Codes Cleared
+std::vector<DecodedItem> DecodePID30(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        int count = data[0];
+        result.push_back({"Warm-ups Since Codes Cleared", std::to_string(count)});
+    }
+    return result;
+}
+
+// PID 0x31: Distance traveled since codes cleared
+std::vector<DecodedItem> DecodePID31(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int km = (data[0] << 8) | data[1];
+        result.push_back({"Distance Since Codes Cleared", std::to_string(km) + " km"});
+    }
+    return result;
+}
+
+// PID 0x32: Evap System Vapor Pressure
+std::vector<DecodedItem> DecodePID32(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int Pa = ((data[0] << 8) | data[1]) / 4;
+        result.push_back({"Evap System Vapor Pressure", std::to_string(Pa) + " Pa"});
+    }
+    return result;
+}
+
+// PID 0x33: Absolute Barometric Pressure
+std::vector<DecodedItem> DecodePID33(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        int kPa = data[0];
+        result.push_back({"Absolute Barometric Pressure", std::to_string(kPa) + " kPa"});
+    }
+    return result;
+}
+
+// PID 0x40: Supported PIDs 0x41–0x60
+std::vector<DecodedItem> DecodePID40(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
+        for (int bit = 7; bit >= 0; --bit) {
+            if (data[byteIndex] & (1 << bit)) {
+                result.push_back({
+                    "Supported PID",
+                    "0x" + std::to_string(0x41 + byteIndex*8 + (7-bit))
+                });
+            }
+        }
+    }
+    return result;
+}
+
+// PID 0x41: Monitor status this drive cycle
+std::vector<DecodedItem> DecodePID41(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 4) {
+        result.push_back({"Misfire Monitoring Complete", (data[0] & 0x01) ? "Yes" : "No"});
+        result.push_back({"Fuel System Monitoring Complete", (data[0] & 0x02) ? "Yes" : "No"});
+        result.push_back({"Components Monitoring Complete", (data[0] & 0x04) ? "Yes" : "No"});
+    }
+    return result;
+}
+
+// PID 0x42: Control module voltage
+std::vector<DecodedItem> DecodePID42(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        float voltage = ((data[0] << 8) | data[1]) / 1000.0f;
+        result.push_back({"Control Module Voltage", std::to_string(voltage) + " V"});
+    }
+    return result;
+}
+
+// PID 0x43: Absolute load value
+std::vector<DecodedItem> DecodePID43(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        float load = ((data[0] << 8) | data[1]) * 100.0f / 255.0f;
+        result.push_back({"Absolute Load Value", std::to_string(load) + " %"});
+    }
+    return result;
+}
+
+// PID 0x44: Commanded equivalence ratio
+std::vector<DecodedItem> DecodePID44(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        float ratio = ((data[0] << 8) | data[1]) / ( 2 / 65536.0f);
+        result.push_back({"Commanded Equivalence Ratio", std::to_string(ratio)});
+    }
+    return result;
+}
+
+// PID 0x45: Relative throttle position
+std::vector<DecodedItem> DecodePID45(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Relative Throttle Position", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x46: Ambient air temperature
+std::vector<DecodedItem> DecodePID46(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        int temp = data[0] - 40;
+        result.push_back({"Ambient Air Temp", std::to_string(temp) + " °C"});
+    }
+    return result;
+}
+
+// PID 0x47: Absolute throttle position B
+std::vector<DecodedItem> DecodePID47(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Throttle Position B", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x48: Absolute throttle position C
+std::vector<DecodedItem> DecodePID48(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Throttle Position C", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x49: Accelerator pedal position D
+std::vector<DecodedItem> DecodePID49(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Accel Pedal Pos D", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x4A: Accelerator pedal position E
+std::vector<DecodedItem> DecodePID4A(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Accel Pedal Pos E", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x4B: Accelerator pedal position F
+std::vector<DecodedItem> DecodePID4B(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Accel Pedal Pos F", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x4C: Commanded throttle actuator
+std::vector<DecodedItem> DecodePID4C(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 1) {
+        float pos = data[0] * 100.0f / 255.0f;
+        result.push_back({"Commanded Throttle Actuator", std::to_string(pos) + " %"});
+    }
+    return result;
+}
+
+// PID 0x4D: Time run with MIL on
+std::vector<DecodedItem> DecodePID4D(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int minutes = (data[0] << 8) | data[1];
+        result.push_back({"Time With MIL On", std::to_string(minutes) + " min"});
+    }
+    return result;
+}
+
+// PID 0x4E: Time since DTCs cleared
+std::vector<DecodedItem> DecodePID4E(const uint8_t* data, uint8_t len) {
+    std::vector<DecodedItem> result;
+    if (len >= 2) {
+        int minutes = (data[0] << 8) | data[1];
+        result.push_back({"Time Since DTCs Cleared", std::to_string(minutes) + " min"});
+    }
+    return result;
+}
+
+PIDEntry pidTable[] = {
+    {0x00, DecodePID00},
+    {0x01, DecodePID01},
+    {0x02, DecodePID02},
+    {0x03, DecodePID03},
+    {0x04, DecodePID04},
+    {0x05, DecodePID05},
+    {0x06, DecodePID06},
+    {0x07, DecodePID07},
+    {0x08, DecodePID08},
+    {0x09, DecodePID09},
+    {0x0A, DecodePID0A},
+    {0x0B, DecodePID0B},
+    {0x0C, DecodePID0C},
+    {0x0D, DecodePID0D},
+    {0x0E, DecodePID0E},
+    {0x0F, DecodePID0F},
+    {0x10, DecodePID10},
+    {0x11, DecodePID11},
+    {0x12, DecodePID12},
+    {0x13, DecodePID13},
+    {0x1F, DecodePID1F},
+    {0x20, DecodePID20},
+    {0x21, DecodePID21},
+    {0x22, DecodePID22},
+    {0x23, DecodePID23},
+    {0x2C, DecodePID2C},
+    {0x2D, DecodePID2D},
+    {0x2E, DecodePID2E},
+    {0x2F, DecodePID2F},
+    {0x20, DecodePID30},
+    {0x21, DecodePID31},
+    {0x22, DecodePID32},
+    {0x23, DecodePID33},
+    {0x20, DecodePID40},
+    {0x21, DecodePID41},
+    {0x22, DecodePID42},
+    {0x23, DecodePID43},
+    {0x24, DecodePID44},
+    {0x25, DecodePID45},
+    {0x26, DecodePID46},
+    {0x27, DecodePID47},
+    {0x28, DecodePID48},
+    {0x29, DecodePID49},
+    {0x2A, DecodePID4A},
+    {0x2B, DecodePID4B},
+    {0x2C, DecodePID4C},
+    {0x2D, DecodePID4D},
+    {0x2E, DecodePID4E},
+    // {0x2F, DecodePID4F},
+    // {0x20, DecodePID40},
+    // {0x21, DecodePID41},
+    // {0x22, DecodePID42},
+    // {0x23, DecodePID43},
+    // {0x24, DecodePID44},
+    // {0x25, DecodePID45},
+    // {0x26, DecodePID46},
+    // {0x27, DecodePID47},
+    // {0x28, DecodePID48},
+    // {0x29, DecodePID49},
+    // {0x2A, DecodePID4A},
+    // {0x2B, DecodePID4B},
+    // {0x2C, DecodePID4C},
+    // {0x2D, DecodePID4D},
+    // {0x2E, DecodePID4E},
+    // {0x2F, DecodePID4F},
+
+};
+
+const size_t pidTableSize = sizeof(pidTable)/sizeof(pidTable[0]);

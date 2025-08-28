@@ -1,0 +1,41 @@
+#ifndef GENARETE_FRAME
+#define GENERATE_FRAME
+
+#include "MultiLogger.h"
+#include "CustomSocket.h"
+
+enum MOD {
+    MShowCurrentData = 0x01,
+    MShowFreezFrameData = 0x02,
+    MShowDTCs = 0x03,
+    MClearDTCs = 0x04,
+    MOxygenSensorMonitorSensorResult = 0x05,
+    MShowOnBoardMonitoringTestResult = 0x06,
+    MRequestVehicleInformation = 0x09,
+    MPermanentDTCs = 0x0A
+};
+
+class GenerateFrame {
+
+    private:
+        ICANInterface* s;
+        struct can_frame frame;
+    
+    public:
+        GenerateFrame(ICANInterface &sender);
+        void ShowCurrentData(uint8_t pid);
+        void ShowFreezFrameData(uint8_t pid);
+        void ShowDTCs();
+        void ClearDTCs();
+        void OxygenSensorMonitorSensorResult(uint8_t pid);
+        void ShowOnBoardMonitoringTestResult(uint8_t pid);
+        void RequestVehicleInformation(uint8_t pid);
+        void PermanentDTCs();
+
+    
+    private:
+        void SendFrame(uint32_t id, MOD mode, uint8_t pid = -1);
+
+};
+
+#endif
