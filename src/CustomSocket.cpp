@@ -36,6 +36,13 @@ bool SocketCAN::init(const std::string& iface) {
     return bind(sock, (struct sockaddr*)&addr, sizeof(addr)) >= 0;
 }
 
+void SocketCAN::setTimeout(int timeoutMs) {
+    struct timeval tv;
+    tv.tv_sec  = timeoutMs / 1000;
+    tv.tv_usec = (timeoutMs % 1000) * 1000;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+}
+
 bool SocketCAN::send(const can_frame& frame) {
     return ::write(sock, &frame, sizeof(frame)) == sizeof(frame);
 }

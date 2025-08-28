@@ -17,6 +17,7 @@ class ICANInterface {
 public:
     virtual bool send(const can_frame& frame) = 0;
     virtual bool receive(can_frame& frame) = 0;
+    virtual void setTimeout(int timeoutMs);
     virtual ~ICANInterface() = default;
 };
 
@@ -58,6 +59,8 @@ public:
         bool send(const can_frame& frame) override;
 
         bool receive(can_frame& frame) override;
+
+        void setTimeout(int timeoutMs);
 
         ~SocketCAN();
     };
