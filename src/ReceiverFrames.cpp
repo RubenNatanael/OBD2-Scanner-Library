@@ -8,18 +8,27 @@ IObd2Modes* ReceiverFrames::ReceiveFrames() {
         return nullptr;
     }
 
-    uint8_t byteMode = responseBuffer[0];
+    uint8_t byteMode = responseBuffer[1];
     switch (byteMode) {
-        case 1: case 2: currentMode = &mode1; break;
-        case 3: case 7: case 0x0A: currentMode = &mode3; break;
-        case 4: currentMode = &mode4; break;
-        default: currentMode = nullptr; break;
+        case 0x41: case 0x42: currentMode = &mode1; LOG_INFO("Mode1/2 recognized"); break;
+        case 0x43: case 0x47: case 0x0A: currentMode = &mode3; LOG_INFO("Mode3/7/0A recognized"); break;
+        case 0x44: currentMode = &mode4; LOG_INFO("Mode4 recognized"); break;
+        default: currentMode = nullptr; LOG_ERR("No mode recognized"); break;
     }
     if (currentMode) {
+        LOG_INFO("Setting Mode...");
         currentMode->setReceivedBytes(receivedBytes);
         currentMode->setResponseBuffer(responseBuffer);
     }
     return currentMode;
+}
+
+void IObd2Modes::setReceivedBytes(uint8_t receivedBytes) {
+    this->receivedBytes = receivedBytes;
+}
+
+void IObd2Modes::setResponseBuffer(uint8_t* responseBuffer) {
+    this->responseBuffer = responseBuffer;
 }
 
 bool ReceiverFrames::readAndAssembleFrames() {
@@ -38,6 +47,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
         can_frame frame;
         if (!r.receive(frame)) {
+            LOG_ERR("Timeout, frame no received");
             return false;
         }
 
@@ -46,8 +56,9 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
         if (frameType == 0x0) {
             totalLength = pci & 0x0F;
-            memcpy(responseBuffer, &frame.data[1], totalLength);
+            memcpy(responseBuffer, &frame.data[0], 1 + totalLength);
             receivedBytes = totalLength;
+            LOG_INFO("Frame received");
             return true;
         }
 
@@ -61,16 +72,18 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
         else if (frameType == 0x2) {
             uint8_t length = pci & 0x0F;
-            memcpy(responseBuffer + receivedBytes, &frame.data[1], length);
+            memcpy(responseBuffer + receivedBytes, &frame.data[0], 1 + length);
             receivedBytes += length;
 
             if (receivedBytes >= totalLength) {
+                LOG_INFO("All frames received");
                 return true;
             }
         }
     }
 
     // Never reached, but safe
+    LOG_ERR("Error has occureed, unknow");
     return false;
 }
 
@@ -82,6 +95,9 @@ std::vector<DecodedItem> Mode1::Decodify() {
     uint8_t pid = responseBuffer[2];
     uint8_t* new_data = responseBuffer + 3;
     uint8_t len = len - 3;
+
+    PIDEntry* pidTable = Mode1Pid().getTable();
+    uint8_t pidTableSize = Mode1Pid().pidTableSize;
 
     for (size_t i = 0; i < pidTableSize; ++i) {
         if (pidTable[i].pid == pid) {
@@ -102,17 +118,18 @@ std::vector<DecodedItem> Mode1::Decodify() {
 */
 std::vector<DecodedItem> Mode3::Decodify() {
     
-    uint8_t* encodedDtc;
     std::vector<DecodedItem> r;
 
     if (receivedBytes == 2) {
-        r[0].label = "No DTCs founded";
-        r[0].value = "0";
+        r.push_back({"No DTCs founded","0"});
         return r;
     }
 
     uint8_t *dtcs = responseBuffer + 2;
-    uint8_t newLength = receivedBytes- 2;
+    uint8_t newLength = receivedBytes - 2;
+
+    uint8_t* encodedDtc = (uint8_t*)malloc(newLength*sizeof(uint8_t));
+
 
     for (int i = 0; i < receivedBytes / 2; i++) {
         encodedDtc[0] = dtcs[i * 2];
@@ -122,8 +139,7 @@ std::vector<DecodedItem> Mode3::Decodify() {
     }
     
     if (r.empty()) {
-        r[0].label = "Erro: Not found";
-        r[0].value = "1";
+        r.push_back({"Erro: Not found","1"});
     }
 
     return r;
@@ -131,25 +147,29 @@ std::vector<DecodedItem> Mode3::Decodify() {
 
 std::string Mode3::DecodifyDTC(uint8_t *data) {
 
-    std::string DTC = "";
-    uint8_t highBits = (data[0] >> 6) & 0x03;
+    uint8_t byte0 = data[0];
+    uint8_t byte1 = data[1];
+
+    // Letter
     char letter;
-    switch(highBits) {
+    switch ((byte0 >> 6) & 0x03) {
         case 0: letter = 'P'; break;
         case 1: letter = 'C'; break;
         case 2: letter = 'B'; break;
         case 3: letter = 'U'; break;
-        default: letter = '?';
     }
 
-    uint8_t number1 = data[0] & 0x3f;
-    uint8_t number2 = data[1];
-    int numericValue = number1 << 8 | number2;
+    // Digits
+    uint8_t digit1 = (byte0 >> 4) & 0x03;   // 2nd digit
+    uint8_t digit2 = byte0 & 0x0F;          // 3rd digit
+    uint8_t digit3 = (byte1 >> 4) & 0x0F;   // 4th digit
+    uint8_t digit4 = byte1 & 0x0F;          // 5th digit
 
-    char buf[5];
-    snprintf(buf, sizeof(buf),"%04d", numericValue);
-    DTC = letter + std::string(buf);
+    char buf[6];
+    snprintf(buf, sizeof(buf), "%1X%1X%1X%1X", digit1, digit2, digit3, digit4);
+    std::string DTC = letter + std::string(buf);
     return DTC;
+
 }
 
 /*  ______________________________________

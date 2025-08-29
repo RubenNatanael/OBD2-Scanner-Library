@@ -4,23 +4,6 @@
 #include "MultiLogger.h"
 #include <stdint.h>
 
-// namespace custom {
-//     struct can_frame {
-//         uint32_t id;
-//         uint8_t  dlc;
-//         uint8_t  data[8];
-//     };
-// }
-
-
-class ICANInterface {
-public:
-    virtual bool send(const can_frame& frame) = 0;
-    virtual bool receive(can_frame& frame) = 0;
-    virtual void setTimeout(int timeoutMs);
-    virtual ~ICANInterface() = default;
-};
-
 // Detect environment
 #if defined(ARDUINO) || defined(PICO_SDK_VERSION_MAJOR)
 
@@ -29,6 +12,14 @@ public:
     #define EMBEDDED
     #include <SPI.h>
     #include <mcp2515.h>
+
+    class ICANInterface {
+    public:
+        virtual bool send(const can_frame& frame) = 0;
+        virtual bool receive(can_frame& frame) = 0;
+        //virtual void setTimeout(int timeoutMs);
+        virtual ~ICANInterface() = default;
+    };
 
     class ArduinoCAN : public ICANInterface {
         struct can_frame cf;
@@ -51,6 +42,14 @@ public:
     #include <unistd.h>
     #include <sys/ioctl.h>
 
+    class ICANInterface {
+    public:
+        virtual bool send(const can_frame& frame) = 0;
+        virtual bool receive(can_frame& frame) = 0;
+        virtual void setTimeout(int timeoutMs) = 0;
+        virtual ~ICANInterface() = default;
+    };
+
     class SocketCAN : public ICANInterface {
         int sock;
     public:
@@ -60,9 +59,9 @@ public:
 
         bool receive(can_frame& frame) override;
 
-        void setTimeout(int timeoutMs);
+        void setTimeout(int timeoutMs) override;
 
-        ~SocketCAN();
+        ~SocketCAN() override;
     };
 #endif
 

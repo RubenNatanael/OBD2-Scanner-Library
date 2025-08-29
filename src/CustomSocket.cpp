@@ -49,6 +49,14 @@ bool SocketCAN::send(const can_frame& frame) {
 
 bool SocketCAN::receive(can_frame& frame) {
     if (::read(sock, &frame, sizeof(frame)) != sizeof(frame)) return false;
+    LOG_INFO("Frame: " + std::to_string(frame.data[0]) + " "
+                       + std::to_string(frame.data[1]) + " "
+                       + std::to_string(frame.data[2]) + " "
+                       + std::to_string(frame.data[3]) + " "
+                       + std::to_string(frame.data[4]) + " "
+                       + std::to_string(frame.data[5]) + " "
+                       + std::to_string(frame.data[6]) + " "
+                       + std::to_string(frame.data[7]));
     return true;
 }
 SocketCAN::~SocketCAN() {

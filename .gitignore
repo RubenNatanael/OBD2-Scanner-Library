@@ -1,3 +1,4 @@
 .vscode/
 dtcmapping.json
 script.py
+*.o
