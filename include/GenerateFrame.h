@@ -1,6 +1,8 @@
 #ifndef GENARETE_FRAME
 #define GENERATE_FRAME
 
+#include <stdio.h>
+
 #include "MultiLogger.h"
 #include "CustomSocket.h"
 

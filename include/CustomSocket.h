@@ -3,6 +3,8 @@
 
 #include "MultiLogger.h"
 #include <stdint.h>
+#include <string>
+#include <cstring>
 
 // Detect environment
 #if defined(ARDUINO) || defined(PICO_SDK_VERSION_MAJOR)
@@ -44,6 +46,7 @@
 
     class ICANInterface {
     public:
+        virtual bool init(const std::string& iface) = 0;
         virtual bool send(const can_frame& frame) = 0;
         virtual bool receive(can_frame& frame) = 0;
         virtual void setTimeout(int timeoutMs) = 0;
@@ -53,7 +56,7 @@
     class SocketCAN : public ICANInterface {
         int sock;
     public:
-        bool init(const std::string& iface);
+        bool init(const std::string& iface) override;
 
         bool send(const can_frame& frame) override;
 

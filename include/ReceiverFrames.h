@@ -1,11 +1,3 @@
-/*
-int main() {
-    SocketCAN sender;
-    sender.init("vcan0");
-    ReceiverFrames r(sender);
-    auto rsp = r.ReceiveFrames()->Decodify();
-}
-*/
 #ifndef RECEIVER_FRAMES
 #define RECEIVER_FRAMES
 
@@ -31,6 +23,7 @@ class IObd2Modes {
         virtual std::vector<DecodedItem> Decodify() = 0;
         void setResponseBuffer(uint8_t *r);
         void setReceivedBytes(uint8_t r);
+        bool ContainsPid(uint8_t pid);
 };
 
 class Mode1: public IObd2Modes {
@@ -53,12 +46,20 @@ class Mode4: public IObd2Modes {
 
 };
 
+class ModeDefault: public IObd2Modes {
+    public:
+        std::vector<DecodedItem> Decodify() override;
+
+};
+
 class ReceiverFrames {
-private:
+public:
     ICANInterface &r;
     Mode1 mode1;
     Mode3 mode3;
     Mode4 mode4;
+    ModeDefault modeDefault;
+private:
     IObd2Modes* currentMode = nullptr;
     __u8 responseBuffer[64];
     uint8_t receivedBytes = 0;

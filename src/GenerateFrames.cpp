@@ -37,6 +37,23 @@ void GenerateFrame::PermanentDTCs() {
     SendFrame(0x728, MPermanentDTCs);
 }
 
+void logCanFrame(const can_frame &frame) {
+    char buf[128];
+    int offset = 0;
+
+    offset += snprintf(buf + offset, sizeof(buf) - offset,
+                       "CAN ID=0x%X DLC=%d Data=",
+                       frame.can_id, frame.can_dlc);
+
+    for (int i = 0; i < frame.can_dlc; i++) {
+        offset += snprintf(buf + offset, sizeof(buf) - offset,
+                           " %02X", frame.data[i]);
+    }
+
+    LOG_INFO(std::string(buf));
+}
+
+
 void GenerateFrame::SendFrame(uint32_t id, MOD mode, uint8_t pid) {
 
     can_frame frame;
@@ -51,5 +68,10 @@ void GenerateFrame::SendFrame(uint32_t id, MOD mode, uint8_t pid) {
         frame.data[i] = 0x0;
     }
 
-    s->send(frame);
+    if (s->send(frame)) {
+        LOG_INFO("Frame sanded");
+        logCanFrame(frame);
+        return;
+    }
+    LOG_ERR("Error while sending frame");
 }

@@ -8,7 +8,8 @@ SRC := main.cpp \
        src/GenerateFrames.cpp \
 	   src/ReceiverFrames.cpp \
        src/Mode1Pids.cpp \
-	   src/TroubleCodes.cpp
+	   src/TroubleCodes.cpp \
+	   src/OBD2Scanner.cpp
 
 OBJ := $(SRC:.cpp=.o)
 

@@ -120,9 +120,11 @@ static std::vector<DecodedItem> DecodePID4D(const uint8_t* data, uint8_t len);
 // PID 0x4E: Time since DTCs cleared
 static std::vector<DecodedItem> DecodePID4E(const uint8_t* data, uint8_t len);
 
-static PIDEntry* getTable();
+static const PIDEntry* getTable();
 
-static const size_t pidTableSize = sizeof(getTable())/sizeof(getTable()[0]);
+static const PIDEntry pidTable[];
+
+static const size_t pidTableSize;
 
 };
 

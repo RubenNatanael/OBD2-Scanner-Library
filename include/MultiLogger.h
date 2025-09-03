@@ -12,6 +12,7 @@
     #include <stdio.h>
     #define LOG_INFO(msg)  do { printf("[INFO] %s\n", msg); } while(0)
     #define LOG_ERR(msg)   do { printf("[ERROR] %s\n", msg); } while(0)
+    #define LOG_WARN(msg)   do { printf("[WARN] %s\n", msg); } while(0)
 
 #else   // PC / Desktop
     //#include <unistd.h>
@@ -19,6 +20,7 @@
     
     #define LOG_INFO(msg)  spdlog::info(msg)
     #define LOG_ERR(msg)   spdlog::error(msg)
+    #define LOG_WARN(msg)   spdlog::warn(msg)
 #endif
 
 #endif

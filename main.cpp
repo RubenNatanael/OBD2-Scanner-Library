@@ -1,15 +1,14 @@
 #include <iostream>
+
+#define ENABLE_LOGGING
+
 #include "OBD2Scanner.h"
 
 int main() {
     
-    SocketCAN com;
-    GenerateFrame g(com);
-    ReceiverFrames r(com);
+    OBD2Scanner obd("vcan0");
 
-    com.init("vcan0");
-    g.ShowDTCs();
-    auto res = r.ReceiveFrames()->Decodify();
+    auto res = obd.getDTCs();
     for(auto& r: res) {
         std::cout<<r.label<<"\n  *"<<r.value<<"\n";
     }

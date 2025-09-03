@@ -13,10 +13,9 @@ IObd2Modes* ReceiverFrames::ReceiveFrames() {
         case 0x41: case 0x42: currentMode = &mode1; LOG_INFO("Mode1/2 recognized"); break;
         case 0x43: case 0x47: case 0x0A: currentMode = &mode3; LOG_INFO("Mode3/7/0A recognized"); break;
         case 0x44: currentMode = &mode4; LOG_INFO("Mode4 recognized"); break;
-        default: currentMode = nullptr; LOG_ERR("No mode recognized"); break;
+        default: currentMode = &modeDefault; LOG_WARN("Can frame is not an OBD2 message"); break;
     }
-    if (currentMode) {
-        LOG_INFO("Setting Mode...");
+    if (currentMode != &modeDefault) {
         currentMode->setReceivedBytes(receivedBytes);
         currentMode->setResponseBuffer(responseBuffer);
     }
@@ -42,7 +41,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
     flowControl.data[2] = 0x00;
     flowControl.data[3] = 0x00;
 
-    r.setTimeout(2000);
+    r.setTimeout(5000);
     while (true) {
 
         can_frame frame;
@@ -52,28 +51,27 @@ bool ReceiverFrames::readAndAssembleFrames() {
         }
 
         uint8_t pci = frame.data[0];
-        uint8_t frameType = pci >> 4;
+        uint8_t frameType = (pci >> 4) & 0x0F;
 
         if (frameType == 0x0) {
-            totalLength = pci & 0x0F;
-            memcpy(responseBuffer, &frame.data[0], 1 + totalLength);
+            totalLength = pci &  + 0x01;
+            memcpy(responseBuffer, &frame.data[0], totalLength);
             receivedBytes = totalLength;
             LOG_INFO("Frame received");
             return true;
         }
 
         else if (frameType == 0x1) {
-            totalLength = ((pci & 0x0F) << 8) | frame.data[1];
-            memcpy(responseBuffer, &frame.data[2], 6);
-            receivedBytes = 6;
+            totalLength = (((pci & 0x0F) << 8) | frame.data[1]) + 0x01;
+            memcpy(responseBuffer, &frame.data[1], 7);
+            receivedBytes = 7;
 
             r.send(flowControl);
         }
 
         else if (frameType == 0x2) {
-            uint8_t length = pci & 0x0F;
-            memcpy(responseBuffer + receivedBytes, &frame.data[0], 1 + length);
-            receivedBytes += length;
+            memcpy(responseBuffer + receivedBytes, &frame.data[1], 7);
+            receivedBytes += 7;
 
             if (receivedBytes >= totalLength) {
                 LOG_INFO("All frames received");
@@ -94,11 +92,13 @@ bool ReceiverFrames::readAndAssembleFrames() {
 std::vector<DecodedItem> Mode1::Decodify() {
     uint8_t pid = responseBuffer[2];
     uint8_t* new_data = responseBuffer + 3;
-    uint8_t len = len - 3;
+    uint8_t len = receivedBytes - 3;
+    LOG_INFO(std::to_string(len));
 
-    PIDEntry* pidTable = Mode1Pid().getTable();
+    const PIDEntry* pidTable = Mode1Pid().getTable();
     uint8_t pidTableSize = Mode1Pid().pidTableSize;
 
+    LOG_INFO(std::to_string(pidTableSize));
     for (size_t i = 0; i < pidTableSize; ++i) {
         if (pidTable[i].pid == pid) {
             return pidTable[i].decoder(new_data, len);
@@ -107,8 +107,7 @@ std::vector<DecodedItem> Mode1::Decodify() {
 
     // Unknown PID
     std::vector<DecodedItem> r;
-    r[0].label = "Erro: Not found";
-    r[0].value = "1";
+    r.push_back({"Erro: Not found", "1"});
     return r;
 }
 
@@ -180,12 +179,23 @@ std::vector<DecodedItem> Mode4::Decodify() {
     std::vector<DecodedItem> r;
     
     if (responseBuffer[1] == 0x44) {
-        r[0].label = "All DTCs deleted";
-        r[0].value = "0";
+        r.push_back({"All DTCs deleted", "0"});
     } else {
-        r[0].label = "Error";
-        r[0].value = "1";
+        r.push_back({"Error", "-1"});
     }
     
     return r;
 }
+
+std::vector<DecodedItem> ModeDefault::Decodify() {
+    std::vector<DecodedItem> r;
+    
+    r.push_back({"", ""});
+    
+    return r;
+}
+
+bool IObd2Modes::ContainsPid(uint8_t pid) {
+    return responseBuffer[2] == pid;
+}
+
