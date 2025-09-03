@@ -3,7 +3,7 @@ CXXFLAGS := -g -Wall -Wextra -std=c++17 -Iinclude
 
 TARGET := main
 
-SRC := main.cpp \
+SRC := example/main.cpp \
        src/CustomSocket.cpp \
        src/GenerateFrames.cpp \
 	   src/ReceiverFrames.cpp \
