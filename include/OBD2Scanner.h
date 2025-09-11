@@ -22,6 +22,7 @@ class OBD2Scanner {
         std::vector<DecodedItem> getDTCs();
         std::vector<DecodedItem> getFreezFrame(uint8_t pid);
         std::vector<DecodedItem> getPermanentDTCs();
+        std::vector<DecodedItem> getPendingDTCs();
         std::vector<DecodedItem> ClearDTCs();
         
         ~OBD2Scanner();

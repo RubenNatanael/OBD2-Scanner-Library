@@ -13,6 +13,7 @@ enum MOD {
     MClearDTCs = 0x04,
     MOxygenSensorMonitorSensorResult = 0x05,
     MShowOnBoardMonitoringTestResult = 0x06,
+    MPendingDTCs = 0x07,
     MRequestVehicleInformation = 0x09,
     MPermanentDTCs = 0x0A
 };
@@ -30,13 +31,14 @@ class GenerateFrame {
         void ShowDTCs();
         void ClearDTCs();
         void OxygenSensorMonitorSensorResult(uint8_t pid);
-        void ShowOnBoardMonitoringTestResult(uint8_t pid);
+        void ShowOnBoardMonitoringTestResult();
+        void PendingDTCs();
         void RequestVehicleInformation(uint8_t pid);
         void PermanentDTCs();
 
     
     private:
-        void SendFrame(uint32_t id, MOD mode, uint8_t pid = -1);
+        void SendFrame(uint32_t id, MOD mode, int pid = -1);
 
 };
 

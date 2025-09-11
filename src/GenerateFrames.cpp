@@ -24,13 +24,17 @@ void GenerateFrame::OxygenSensorMonitorSensorResult(uint8_t pid) {
     LOG_INFO("Client requested OxygenSensorMonitorSensorResult");
     SendFrame(0x728, MOxygenSensorMonitorSensorResult, pid);
 }
-void GenerateFrame::ShowOnBoardMonitoringTestResult(uint8_t pid) {
+void GenerateFrame::ShowOnBoardMonitoringTestResult() {
     LOG_INFO("Client requested ShowOnBoardMonitoringTestResult");
     SendFrame(0x728, MShowOnBoardMonitoringTestResult);
 }
 void GenerateFrame::RequestVehicleInformation(uint8_t pid) {
     LOG_INFO("Client requested RequestVehicleInformation");
-    SendFrame(0x728, MRequestVehicleInformation);
+    SendFrame(0x728, MRequestVehicleInformation, pid);
+}
+void GenerateFrame::PendingDTCs() {
+    LOG_INFO("Client requested Pending DTCs");
+    SendFrame(0x728, MPendingDTCs);
 }
 void GenerateFrame::PermanentDTCs() {
     LOG_INFO("Client requested PermanentDTCs");
@@ -54,7 +58,7 @@ void logCanFrame(const can_frame &frame) {
 }
 
 
-void GenerateFrame::SendFrame(uint32_t id, MOD mode, uint8_t pid) {
+void GenerateFrame::SendFrame(uint32_t id, MOD mode, int pid) {
 
     can_frame frame;
 

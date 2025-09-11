@@ -10,13 +10,16 @@ IObd2Modes* ReceiverFrames::ReceiveFrames() {
 
     uint8_t byteMode = responseBuffer[1];
     switch (byteMode) {
-        case 0x41: case 0x42: currentMode = &mode1; LOG_INFO("Mode1/2 recognized"); break;
-        case 0x43: case 0x47: case 0x0A: currentMode = &mode3; LOG_INFO("Mode3/7/0A recognized"); break;
+        case 0x41: currentMode = &mode1; LOG_INFO("Mode1 recognized"); break;
+        case 0x42: currentMode = &mode2; LOG_INFO("Mode2 recognized"); break;
+        case 0x43: currentMode = &mode3; LOG_INFO("Mode3 recognized"); break;
+        case 0x47: currentMode = &mode7; LOG_INFO("Mode7 recognized"); break;
+        case 0x4A: currentMode = &modeA; LOG_INFO("Mode0A recognized"); break;
         case 0x44: currentMode = &mode4; LOG_INFO("Mode4 recognized"); break;
         default: currentMode = &modeDefault; LOG_WARN("Can frame is not an OBD2 message"); break;
     }
     if (currentMode != &modeDefault) {
-        currentMode->setReceivedBytes(receivedBytes);
+        currentMode->setReceivedBytes(totalLength);
         currentMode->setResponseBuffer(responseBuffer);
     }
     return currentMode;
@@ -54,7 +57,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
         uint8_t frameType = (pci >> 4) & 0x0F;
 
         if (frameType == 0x0) {
-            totalLength = pci &  + 0x01;
+            totalLength = pci + 0x01;
             memcpy(responseBuffer, &frame.data[0], totalLength);
             receivedBytes = totalLength;
             LOG_INFO("Frame received");
@@ -93,12 +96,10 @@ std::vector<DecodedItem> Mode1::Decodify() {
     uint8_t pid = responseBuffer[2];
     uint8_t* new_data = responseBuffer + 3;
     uint8_t len = receivedBytes - 3;
-    LOG_INFO(std::to_string(len));
 
     const PIDEntry* pidTable = Mode1Pid().getTable();
     uint8_t pidTableSize = Mode1Pid().pidTableSize;
 
-    LOG_INFO(std::to_string(pidTableSize));
     for (size_t i = 0; i < pidTableSize; ++i) {
         if (pidTable[i].pid == pid) {
             return pidTable[i].decoder(new_data, len);
@@ -130,12 +131,13 @@ std::vector<DecodedItem> Mode3::Decodify() {
     uint8_t* encodedDtc = (uint8_t*)malloc(newLength*sizeof(uint8_t));
 
 
-    for (int i = 0; i < receivedBytes / 2; i++) {
+    for (int i = 0; i < newLength / 2; i++) {
         encodedDtc[0] = dtcs[i * 2];
         encodedDtc[1] = dtcs[(i * 2) + 1];
         std::string dtc = DecodifyDTC(encodedDtc);
         r.push_back({"DTC: ",Parse(dtc)});
     }
+    delete encodedDtc;
     
     if (r.empty()) {
         r.push_back({"Erro: Not found","1"});
@@ -159,10 +161,10 @@ std::string Mode3::DecodifyDTC(uint8_t *data) {
     }
 
     // Digits
-    uint8_t digit1 = (byte0 >> 4) & 0x03;   // 2nd digit
-    uint8_t digit2 = byte0 & 0x0F;          // 3rd digit
-    uint8_t digit3 = (byte1 >> 4) & 0x0F;   // 4th digit
-    uint8_t digit4 = byte1 & 0x0F;          // 5th digit
+    uint8_t digit1 = (byte0 >> 4) & 0x03;
+    uint8_t digit2 = byte0 & 0x0F;
+    uint8_t digit3 = (byte1 >> 4) & 0x0F;
+    uint8_t digit4 = byte1 & 0x0F;
 
     char buf[6];
     snprintf(buf, sizeof(buf), "%1X%1X%1X%1X", digit1, digit2, digit3, digit4);

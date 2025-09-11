@@ -1,7 +1,6 @@
 #ifndef MULTI_LOGGER
 #define MULTI_LOGGER
 
-// Detect environment
 #if defined(ARDUINO)        // Arduino boards
     #define EMBEDDED
     #define LOG_INFO(msg)  do { Serial.print("[INFO] ");  Serial.println(msg); } while(0)
@@ -15,7 +14,6 @@
     #define LOG_WARN(msg)   do { printf("[WARN] %s\n", msg); } while(0)
 
 #else   // PC / Desktop
-    //#include <unistd.h>
     #include <spdlog/spdlog.h>
     
     #define LOG_INFO(msg)  spdlog::info(msg)

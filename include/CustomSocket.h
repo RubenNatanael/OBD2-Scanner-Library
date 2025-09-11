@@ -10,8 +10,6 @@
 #if defined(ARDUINO) || defined(PICO_SDK_VERSION_MAJOR)
 
     #define EMBEDDED
-    // Use can library
-    #define EMBEDDED
     #include <SPI.h>
     #include <mcp2515.h>
 
@@ -36,7 +34,6 @@
     };
 
 #else   // PC / Desktop
-    //Use socket
     #include <linux/can.h>
     #include <linux/can/raw.h>
     #include <sys/socket.h>
@@ -63,6 +60,8 @@
         bool receive(can_frame& frame) override;
 
         void setTimeout(int timeoutMs) override;
+
+        bool isOBD2(can_frame& frame);
 
         ~SocketCAN() override;
     };

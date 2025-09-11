@@ -10,4 +10,12 @@ int main() {
     for(auto& r: res) {
         std::cout<<r.label<<"\n  *"<<r.value<<"\n";
     }
+    auto res2 = obd.getFreezFrame(0x00);
+    for(auto& r: res2) {
+        std::cout<<r.label<<"\n  *"<<r.value<<"\n";
+    }
+    auto res3 = obd.ClearDTCs();
+    for(auto& r: res3) {
+        std::cout<<r.label<<"\n  *"<<r.value<<"\n";
+    }
 }

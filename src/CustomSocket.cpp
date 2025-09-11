@@ -48,7 +48,14 @@ bool SocketCAN::send(const can_frame& frame) {
 }
 
 bool SocketCAN::receive(can_frame& frame) {
-    if (::read(sock, &frame, sizeof(frame)) != sizeof(frame)) return false;
+
+    while(true) {
+        if (::read(sock, &frame, sizeof(frame)) != sizeof(frame)) return false;
+
+        // Filter frames
+        if (isOBD2(frame)) break;
+    }
+
     LOG_INFO("Frame: " + std::to_string(frame.data[0]) + " "
                        + std::to_string(frame.data[1]) + " "
                        + std::to_string(frame.data[2]) + " "
@@ -61,6 +68,18 @@ bool SocketCAN::receive(can_frame& frame) {
 }
 SocketCAN::~SocketCAN() {
     close(sock);
+}
+
+bool SocketCAN::isOBD2(can_frame& frame) {
+    LOG_INFO(std::to_string(frame.data[1]));
+    if (frame.data[0] != 0x10 && frame.data[1] < 0x4B && frame.data[1] > 0x40) {
+        return true;
+    } else if( frame.data[0] == 0x10 && frame.data[2] < 0x4B && frame.data[2] > 0x40) {
+        return true;
+    } else if (frame.data[0] > 0x19 && frame.data[0] < 0x30) {
+        return true;
+    }
+    return false;
 }
 
 #endif
