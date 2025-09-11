@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include "TroubleCodes.h"
 
 struct DecodedItem {
     std::string label;  // Ex: "RPM"

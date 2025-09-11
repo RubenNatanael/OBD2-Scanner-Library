@@ -30,25 +30,25 @@ const PIDEntry Mode1Pid::pidTable[] = {
     {0x2D, &Mode1Pid::DecodePID2D},
     {0x2E, &Mode1Pid::DecodePID2E},
     {0x2F, &Mode1Pid::DecodePID2F},
-    {0x20, &Mode1Pid::DecodePID30},
-    {0x21, &Mode1Pid::DecodePID31},
-    {0x22, &Mode1Pid::DecodePID32},
-    {0x23, &Mode1Pid::DecodePID33},
-    {0x20, &Mode1Pid::DecodePID40},
-    {0x21, &Mode1Pid::DecodePID41},
-    {0x22, &Mode1Pid::DecodePID42},
-    {0x23, &Mode1Pid::DecodePID43},
-    {0x24, &Mode1Pid::DecodePID44},
-    {0x25, &Mode1Pid::DecodePID45},
-    {0x26, &Mode1Pid::DecodePID46},
-    {0x27, &Mode1Pid::DecodePID47},
-    {0x28, &Mode1Pid::DecodePID48},
-    {0x29, &Mode1Pid::DecodePID49},
-    {0x2A, &Mode1Pid::DecodePID4A},
-    {0x2B, &Mode1Pid::DecodePID4B},
-    {0x2C, &Mode1Pid::DecodePID4C},
-    {0x2D, &Mode1Pid::DecodePID4D},
-    {0x2E, &Mode1Pid::DecodePID4E},
+    {0x30, &Mode1Pid::DecodePID30},
+    {0x31, &Mode1Pid::DecodePID31},
+    {0x32, &Mode1Pid::DecodePID32},
+    {0x33, &Mode1Pid::DecodePID33},
+    {0x40, &Mode1Pid::DecodePID40},
+    {0x41, &Mode1Pid::DecodePID41},
+    {0x42, &Mode1Pid::DecodePID42},
+    {0x43, &Mode1Pid::DecodePID43},
+    {0x44, &Mode1Pid::DecodePID44},
+    {0x45, &Mode1Pid::DecodePID45},
+    {0x46, &Mode1Pid::DecodePID46},
+    {0x47, &Mode1Pid::DecodePID47},
+    {0x48, &Mode1Pid::DecodePID48},
+    {0x49, &Mode1Pid::DecodePID49},
+    {0x4A, &Mode1Pid::DecodePID4A},
+    {0x4B, &Mode1Pid::DecodePID4B},
+    {0x4C, &Mode1Pid::DecodePID4C},
+    {0x4D, &Mode1Pid::DecodePID4D},
+    {0x4E, &Mode1Pid::DecodePID4E},
     // {0x2F, &Mode1Pid::DecodePID4F},
     // {0x20, &Mode1Pid::DecodePID40},
     // {0x21, &Mode1Pid::DecodePID41},
@@ -70,12 +70,13 @@ const PIDEntry Mode1Pid::pidTable[] = {
 
 const PIDEntry* Mode1Pid::getTable() {
     return pidTable;
-
 }
 
 // PID 0x00: Supported PIDs 01–20
 std::vector<DecodedItem> Mode1Pid::DecodePID00(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 4) return result;
+
     for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
         for (int bit = 7; bit >= 0; --bit) {
             if (data[byteIndex] & (1 << bit)) {
@@ -113,13 +114,47 @@ std::vector<DecodedItem> Mode1Pid::DecodePID01(const uint8_t* data, uint8_t len)
 
 // PID 0x02: DTC that causes freez frame
 std::vector<DecodedItem> Mode1Pid::DecodePID02(const uint8_t* data, uint8_t len) {
-    // TODO when implemented Mode 3(parse DTCs)
+    std::vector<DecodedItem> result;
+    if (len < 2) return result;
+
+    uint8_t encodedDtc[2];
+
+     for (int i = 0; i < len / 2; i++) {
+        encodedDtc[0] = data[i * 2];
+        encodedDtc[1] = data[(i * 2) + 1];
+
+        // Letter
+        char letter;
+        switch ((encodedDtc[0] >> 6) & 0x03) {
+            case 0: letter = 'P'; break;
+            case 1: letter = 'C'; break;
+            case 2: letter = 'B'; break;
+            case 3: letter = 'U'; break;
+        }
+
+        // Digits
+        uint8_t digit1 = (encodedDtc[0] >> 4) & 0x03;
+        uint8_t digit2 = encodedDtc[0] & 0x0F;
+        uint8_t digit3 = (encodedDtc[1] >> 4) & 0x0F;
+        uint8_t digit4 = encodedDtc[1] & 0x0F;
+
+        char buf[6];
+        snprintf(buf, sizeof(buf), "%1X%1X%1X%1X", digit1, digit2, digit3, digit4);
+        std::string DTC = letter + std::string(buf);
+        result.push_back({"DTC: ",Parse(DTC)});
+        }
+    
+    if (result.empty()) {
+        result.push_back({"Erro: Not found","1"});
+    }
+    return result;
 }
 
 //TODO - verify
 // PID 0x03: Fuel System Status
 std::vector<DecodedItem> Mode1Pid::DecodePID03(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     std::string text = "";
     switch (data[0])
     {
@@ -153,6 +188,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID03(const uint8_t* data, uint8_t len)
 // PID 0x04: Calculate Engine Load
 std::vector<DecodedItem> Mode1Pid::DecodePID04(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     float procentage = (float)data[0] * 2.55;
     result.push_back({"Engine Load", std::to_string(procentage) + " %"});
     return result;
@@ -161,6 +197,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID04(const uint8_t* data, uint8_t len)
 // PID 0x05: Engine Coolant Temp
 std::vector<DecodedItem> Mode1Pid::DecodePID05(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     result.push_back({"Coolant Temp", std::to_string((int)data[0]-40) + " °C"});
     return result;
 }
@@ -168,6 +205,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID05(const uint8_t* data, uint8_t len)
 // PID 0x06: Short term fuel trim (STFT)—Bank 1 
 std::vector<DecodedItem> Mode1Pid::DecodePID06(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
     result.push_back({"STFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
@@ -176,6 +214,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID06(const uint8_t* data, uint8_t len)
 // PID 0x07: Long term fuel trim (LTFT)—Bank 1 
 std::vector<DecodedItem> Mode1Pid::DecodePID07(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
     result.push_back({"LTFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
@@ -184,6 +223,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID07(const uint8_t* data, uint8_t len)
 // PID 0x08: Short term fuel trim (STFT)—Bank 2
 std::vector<DecodedItem> Mode1Pid::DecodePID08(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
     result.push_back({"STFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
@@ -192,6 +232,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID08(const uint8_t* data, uint8_t len)
 // PID 0x08: Long term fuel trim (LTFT)—Bank 2
 std::vector<DecodedItem> Mode1Pid::DecodePID09(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
     result.push_back({"LTFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
@@ -200,6 +241,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID09(const uint8_t* data, uint8_t len)
 // PID 0x0A: Fuel Presure
 std::vector<DecodedItem> Mode1Pid::DecodePID0A(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     int presure = data[0] * 3;
     result.push_back({"Fuel Presure", std::to_string(presure) + " kPa"});
     return result;
@@ -208,6 +250,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0A(const uint8_t* data, uint8_t len)
 // PID 0x0B: Intake manifold absolute pressure 
 std::vector<DecodedItem> Mode1Pid::DecodePID0B(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     result.push_back({"Intake manifold absolute pressure", std::to_string(data[0]) + " kPa"});
     return result;
 }
@@ -215,6 +258,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0B(const uint8_t* data, uint8_t len)
 // PID 0x0C: Engine RPM
 std::vector<DecodedItem> Mode1Pid::DecodePID0C(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 2) return result;
     int raw = (data[0] << 8) | data[1];
     float rpm = raw / 4.0f;
     result.push_back({"RPM", std::to_string(rpm) + " rpm"});
@@ -224,6 +268,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0C(const uint8_t* data, uint8_t len)
 // PID 0x0D: Vehicle Speed
 std::vector<DecodedItem> Mode1Pid::DecodePID0D(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 1) return result;
     result.push_back({"Speed", std::to_string(data[0]) + " km/h"});
     return result;
 }
@@ -310,6 +355,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID1F(const uint8_t* data, uint8_t len)
 // PID 0x20: PIDs supported [21–40]
 std::vector<DecodedItem> Mode1Pid::DecodePID20(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 4) return result;
     for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
         for (int bit = 7; bit >= 0; --bit) {
             if (data[byteIndex] & (1 << bit)) {
@@ -433,6 +479,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID33(const uint8_t* data, uint8_t len)
 // PID 0x40: Supported PIDs 0x41–0x60
 std::vector<DecodedItem> Mode1Pid::DecodePID40(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
+    if (len < 4) return result;
     for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
         for (int bit = 7; bit >= 0; --bit) {
             if (data[byteIndex] & (1 << bit)) {
@@ -586,75 +633,6 @@ std::vector<DecodedItem> Mode1Pid::DecodePID4E(const uint8_t* data, uint8_t len)
     }
     return result;
 }
-
-PIDEntry pidTable[] = {
-    {0x00, &Mode1Pid::DecodePID00},
-    {0x01, &Mode1Pid::DecodePID01},
-    {0x02, &Mode1Pid::DecodePID02},
-    {0x03, &Mode1Pid::DecodePID03},
-    {0x04, &Mode1Pid::DecodePID04},
-    {0x05, &Mode1Pid::DecodePID05},
-    {0x06, &Mode1Pid::DecodePID06},
-    {0x07, &Mode1Pid::DecodePID07},
-    {0x08, &Mode1Pid::DecodePID08},
-    {0x09, &Mode1Pid::DecodePID09},
-    {0x0A, &Mode1Pid::DecodePID0A},
-    {0x0B, &Mode1Pid::DecodePID0B},
-    {0x0C, &Mode1Pid::DecodePID0C},
-    {0x0D, &Mode1Pid::DecodePID0D},
-    {0x0E, &Mode1Pid::DecodePID0E},
-    {0x0F, &Mode1Pid::DecodePID0F},
-    {0x10, &Mode1Pid::DecodePID10},
-    {0x11, &Mode1Pid::DecodePID11},
-    {0x12, &Mode1Pid::DecodePID12},
-    {0x13, &Mode1Pid::DecodePID13},
-    {0x1F, &Mode1Pid::DecodePID1F},
-    {0x20, &Mode1Pid::DecodePID20},
-    {0x21, &Mode1Pid::DecodePID21},
-    {0x22, &Mode1Pid::DecodePID22},
-    {0x23, &Mode1Pid::DecodePID23},
-    {0x2C, &Mode1Pid::DecodePID2C},
-    {0x2D, &Mode1Pid::DecodePID2D},
-    {0x2E, &Mode1Pid::DecodePID2E},
-    {0x2F, &Mode1Pid::DecodePID2F},
-    {0x20, &Mode1Pid::DecodePID30},
-    {0x21, &Mode1Pid::DecodePID31},
-    {0x22, &Mode1Pid::DecodePID32},
-    {0x23, &Mode1Pid::DecodePID33},
-    {0x20, &Mode1Pid::DecodePID40},
-    {0x21, &Mode1Pid::DecodePID41},
-    {0x22, &Mode1Pid::DecodePID42},
-    {0x23, &Mode1Pid::DecodePID43},
-    {0x24, &Mode1Pid::DecodePID44},
-    {0x25, &Mode1Pid::DecodePID45},
-    {0x26, &Mode1Pid::DecodePID46},
-    {0x27, &Mode1Pid::DecodePID47},
-    {0x28, &Mode1Pid::DecodePID48},
-    {0x29, &Mode1Pid::DecodePID49},
-    {0x2A, &Mode1Pid::DecodePID4A},
-    {0x2B, &Mode1Pid::DecodePID4B},
-    {0x2C, &Mode1Pid::DecodePID4C},
-    {0x2D, &Mode1Pid::DecodePID4D},
-    {0x2E, &Mode1Pid::DecodePID4E},
-    // {0x2F, &Mode1Pid::DecodePID4F},
-    // {0x20, &Mode1Pid::DecodePID40},
-    // {0x21, &Mode1Pid::DecodePID41},
-    // {0x22, &Mode1Pid::DecodePID42},
-    // {0x23, &Mode1Pid::DecodePID43},
-    // {0x24, &Mode1Pid::DecodePID44},
-    // {0x25, &Mode1Pid::DecodePID45},
-    // {0x26, &Mode1Pid::DecodePID46},
-    // {0x27, &Mode1Pid::DecodePID47},
-    // {0x28, &Mode1Pid::DecodePID48},
-    // {0x29, &Mode1Pid::DecodePID49},
-    // {0x2A, &Mode1Pid::DecodePID4A},
-    // {0x2B, &Mode1Pid::DecodePID4B},
-    // {0x2C, &Mode1Pid::DecodePID4C},
-    // {0x2D, &Mode1Pid::DecodePID4D},
-    // {0x2E, &Mode1Pid::DecodePID4E},
-    // {0x2F, &Mode1Pid::DecodePID4F},
-
-};
 
 const size_t Mode1Pid::pidTableSize = sizeof(pidTable)/sizeof(pidTable[0]);
 

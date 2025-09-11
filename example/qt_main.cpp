@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     // --- Button 4: Clear DTC ---
     {
         QHBoxLayout *row = new QHBoxLayout;
-        QPushButton *button = new QPushButton("Get VIN");
+        QPushButton *button = new QPushButton("Clear DTC");
         QLabel *label = new QLabel("No data yet");
         row->addWidget(button);
         row->addWidget(label);

@@ -128,7 +128,7 @@ std::vector<DecodedItem> Mode3::Decodify() {
     uint8_t *dtcs = responseBuffer + 2;
     uint8_t newLength = receivedBytes - 2;
 
-    uint8_t* encodedDtc = (uint8_t*)malloc(newLength*sizeof(uint8_t));
+    uint8_t encodedDtc[2];
 
 
     for (int i = 0; i < newLength / 2; i++) {
@@ -137,7 +137,6 @@ std::vector<DecodedItem> Mode3::Decodify() {
         std::string dtc = DecodifyDTC(encodedDtc);
         r.push_back({"DTC: ",Parse(dtc)});
     }
-    delete encodedDtc;
     
     if (r.empty()) {
         r.push_back({"Erro: Not found","1"});
