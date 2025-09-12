@@ -8,7 +8,7 @@ IObd2Modes* ReceiverFrames::ReceiveFrames() {
         return nullptr;
     }
 
-    uint8_t byteMode = responseBuffer[1];
+    uint8_t byteMode = responseBuffer[0];
     switch (byteMode) {
         case 0x41: currentMode = &mode1; LOG_INFO("Mode1 recognized"); break;
         case 0x42: currentMode = &mode2; LOG_INFO("Mode2 recognized"); break;
@@ -37,54 +37,64 @@ bool ReceiverFrames::readAndAssembleFrames() {
     receivedBytes = 0;
     totalLength = 0;
     can_frame flowControl;
-    flowControl.can_id = 0x777;
-    flowControl.can_dlc = 4;
+    flowControl.can_dlc = 8;
+    memset(flowControl.data, 0, 8);
     flowControl.data[0] = 0x30;
-    flowControl.data[1] = 0x00;
-    flowControl.data[2] = 0x00;
-    flowControl.data[3] = 0x00;
 
-    r.setTimeout(5000);
-    while (true) {
+    r.setTimeout(500);
+
+    bool responseReceived = false;
+    bool isMultipleFrame = false;
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+
+    __u8* temp_responseBuffer = responseBuffer + 1;
+
+    while (std::chrono::steady_clock::now() < deadline) {
 
         can_frame frame;
         if (!r.receive(frame)) {
-            LOG_ERR("Timeout, frame no received");
-            return false;
+            if (!responseReceived) LOG_WARN("Timeout, frame no received");
+            break;
         }
 
         uint8_t pci = frame.data[0];
         uint8_t frameType = (pci >> 4) & 0x0F;
 
         if (frameType == 0x0) {
-            totalLength = pci + 0x01;
-            memcpy(responseBuffer, &frame.data[0], totalLength);
-            receivedBytes = totalLength;
+            totalLength += pci - 1;
+            memcpy(temp_responseBuffer + receivedBytes, &frame.data[2], totalLength);
+            responseBuffer[0] = frame.data[1];
+            receivedBytes += totalLength;
             LOG_INFO("Frame received");
-            return true;
+            responseReceived = true;
         }
 
         else if (frameType == 0x1) {
-            totalLength = (((pci & 0x0F) << 8) | frame.data[1]) + 0x01;
-            memcpy(responseBuffer, &frame.data[1], 7);
-            receivedBytes = 7;
-
+            totalLength += (((pci & 0x0F) << 8) | frame.data[1]) -1;
+            memcpy(temp_responseBuffer + receivedBytes, &frame.data[3], 5);
+            responseBuffer[0] = frame.data[2];
+            receivedBytes = 5;
+            flowControl.can_id = frame.can_id;
+            isMultipleFrame = true;
             r.send(flowControl);
         }
 
-        else if (frameType == 0x2) {
-            memcpy(responseBuffer + receivedBytes, &frame.data[1], 7);
+        else if (frameType == 0x2 && isMultipleFrame) {
+            memcpy(temp_responseBuffer + receivedBytes, &frame.data[1], 7);
             receivedBytes += 7;
 
             if (receivedBytes >= totalLength) {
                 LOG_INFO("All frames received");
-                return true;
+                responseReceived = true;
+                isMultipleFrame = false;
             }
         }
     }
 
-    // Never reached, but safe
-    LOG_ERR("Error has occureed, unknow");
+    totalLength += 1;
+    if (responseReceived) return true;
+
     return false;
 }
 
@@ -93,9 +103,9 @@ bool ReceiverFrames::readAndAssembleFrames() {
     | Frame| 7E8#03 41 0D 12 AA AA AA AA |
 */
 std::vector<DecodedItem> Mode1::Decodify() {
-    uint8_t pid = responseBuffer[2];
-    uint8_t* new_data = responseBuffer + 3;
-    uint8_t len = receivedBytes - 3;
+    uint8_t pid = responseBuffer[1];
+    uint8_t* new_data = responseBuffer + 2;
+    uint8_t len = receivedBytes - 2;
 
     const PIDEntry* pidTable = Mode1Pid().getTable();
     uint8_t pidTableSize = Mode1Pid().pidTableSize;
@@ -120,13 +130,13 @@ std::vector<DecodedItem> Mode3::Decodify() {
     
     std::vector<DecodedItem> r;
 
-    if (receivedBytes == 2) {
+    if (receivedBytes == 1) {
         r.push_back({"No DTCs founded","0"});
         return r;
     }
 
-    uint8_t *dtcs = responseBuffer + 2;
-    uint8_t newLength = receivedBytes - 2;
+    uint8_t *dtcs = responseBuffer + 1;
+    uint8_t newLength = receivedBytes - 1;
 
     uint8_t encodedDtc[2];
 
@@ -179,7 +189,7 @@ std::string Mode3::DecodifyDTC(uint8_t *data) {
 std::vector<DecodedItem> Mode4::Decodify() {
     std::vector<DecodedItem> r;
     
-    if (responseBuffer[1] == 0x44) {
+    if (responseBuffer[0] == 0x44) {
         r.push_back({"All DTCs deleted", "0"});
     } else {
         r.push_back({"Error", "-1"});

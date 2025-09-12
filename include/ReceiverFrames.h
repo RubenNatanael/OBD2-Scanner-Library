@@ -14,6 +14,7 @@
 
 #include <vector>
 #include <utility>
+#include <chrono>
 
 class IObd2Modes {
     protected:

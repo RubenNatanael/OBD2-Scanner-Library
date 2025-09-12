@@ -4,41 +4,41 @@ GenerateFrame::GenerateFrame(ICANInterface &sender): s(&sender){}
 
 void GenerateFrame::ShowCurrentData(uint8_t pid){
     LOG_INFO("Client requested ShowCurrentData");
-    SendFrame(0x728, MShowCurrentData, pid);
+    SendFrame(broadcast_id, MShowCurrentData, pid);
 }
 
 void GenerateFrame::ShowFreezFrameData(uint8_t pid) {
     LOG_INFO("Client requested ShowFreezFrameData");
-    SendFrame(0x728, MShowFreezFrameData, pid);
+    SendFrame(broadcast_id, MShowFreezFrameData, pid);
 
 }
 void GenerateFrame::ShowDTCs() {
     LOG_INFO("Client requested ShowDTCs");
-    SendFrame(0x728, MShowDTCs);
+    SendFrame(broadcast_id, MShowDTCs);
 }
 void GenerateFrame::ClearDTCs() {
     LOG_INFO("Client requested ClearDTCs");
-    SendFrame(0x728, MClearDTCs);
+    SendFrame(broadcast_id, MClearDTCs);
 }
 void GenerateFrame::OxygenSensorMonitorSensorResult(uint8_t pid) {
     LOG_INFO("Client requested OxygenSensorMonitorSensorResult");
-    SendFrame(0x728, MOxygenSensorMonitorSensorResult, pid);
+    SendFrame(broadcast_id, MOxygenSensorMonitorSensorResult, pid);
 }
 void GenerateFrame::ShowOnBoardMonitoringTestResult() {
     LOG_INFO("Client requested ShowOnBoardMonitoringTestResult");
-    SendFrame(0x728, MShowOnBoardMonitoringTestResult);
+    SendFrame(broadcast_id, MShowOnBoardMonitoringTestResult);
 }
 void GenerateFrame::RequestVehicleInformation(uint8_t pid) {
     LOG_INFO("Client requested RequestVehicleInformation");
-    SendFrame(0x728, MRequestVehicleInformation, pid);
+    SendFrame(broadcast_id, MRequestVehicleInformation, pid);
 }
 void GenerateFrame::PendingDTCs() {
     LOG_INFO("Client requested Pending DTCs");
-    SendFrame(0x728, MPendingDTCs);
+    SendFrame(broadcast_id, MPendingDTCs);
 }
 void GenerateFrame::PermanentDTCs() {
     LOG_INFO("Client requested PermanentDTCs");
-    SendFrame(0x728, MPermanentDTCs);
+    SendFrame(broadcast_id, MPermanentDTCs);
 }
 
 void logCanFrame(const can_frame &frame) {

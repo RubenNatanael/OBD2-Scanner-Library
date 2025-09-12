@@ -23,6 +23,7 @@ class GenerateFrame {
     private:
         ICANInterface* s;
         struct can_frame frame;
+        int broadcast_id = 0x07DF;
     
     public:
         GenerateFrame(ICANInterface &sender);
@@ -35,7 +36,6 @@ class GenerateFrame {
         void PendingDTCs();
         void RequestVehicleInformation(uint8_t pid);
         void PermanentDTCs();
-
     
     private:
         void SendFrame(uint32_t id, MOD mode, int pid = -1);
