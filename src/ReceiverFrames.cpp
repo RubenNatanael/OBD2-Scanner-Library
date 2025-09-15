@@ -43,40 +43,41 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
     r.setTimeout(500);
 
-    bool responseReceived = false;
     bool isMultipleFrame = false;
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
 
     __u8* temp_responseBuffer = responseBuffer + 1;
+    uint8_t mode = 0;
 
     while (std::chrono::steady_clock::now() < deadline) {
 
         can_frame frame;
         if (!r.receive(frame)) {
-            if (!responseReceived) LOG_WARN("Timeout, frame no received");
+            if (!mode) LOG_WARN("Timeout, frame no received");
             break;
         }
 
         uint8_t pci = frame.data[0];
         uint8_t frameType = (pci >> 4) & 0x0F;
 
-        if (frameType == 0x0) {
+        if (frameType == 0x0 && (mode == 0 || mode == frame.data[1])) {
             totalLength += pci - 1;
             memcpy(temp_responseBuffer + receivedBytes, &frame.data[2], totalLength);
             responseBuffer[0] = frame.data[1];
             receivedBytes += totalLength;
             LOG_INFO("Frame received");
-            responseReceived = true;
+            mode = frame.data[1];
         }
 
-        else if (frameType == 0x1) {
+        else if (frameType == 0x1 && (mode == 0 || mode == frame.data[2])) {
             totalLength += (((pci & 0x0F) << 8) | frame.data[1]) -1;
             memcpy(temp_responseBuffer + receivedBytes, &frame.data[3], 5);
             responseBuffer[0] = frame.data[2];
             receivedBytes = 5;
             flowControl.can_id = frame.can_id;
             isMultipleFrame = true;
+            mode = frame.data[2];
             r.send(flowControl);
         }
 
@@ -86,14 +87,13 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
             if (receivedBytes >= totalLength) {
                 LOG_INFO("All frames received");
-                responseReceived = true;
                 isMultipleFrame = false;
             }
         }
     }
 
     totalLength += 1;
-    if (responseReceived) return true;
+    if (mode) return true;
 
     return false;
 }

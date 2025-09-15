@@ -2,3 +2,4 @@
 dtcmapping.json
 script.py
 *.o
+*.a
