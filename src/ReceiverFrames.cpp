@@ -207,6 +207,6 @@ std::vector<DecodedItem> ModeDefault::Decodify() {
 }
 
 bool IObd2Modes::ContainsPid(uint8_t pid) {
-    return responseBuffer[2] == pid;
+    return responseBuffer[1] == pid;
 }
 

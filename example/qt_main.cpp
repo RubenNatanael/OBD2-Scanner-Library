@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         row->addWidget(label);
 
         QObject::connect(button, &QPushButton::clicked, [label, &obd]() {
-            auto res = obd.getFreezFrame(03);
+            auto res = obd.getFreezFrame(OBD2::Pid::FuelSystemStatus);
             label->setText(vectorToQString(res));
         });
 

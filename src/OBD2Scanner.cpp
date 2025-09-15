@@ -33,7 +33,7 @@ std::vector<DecodedItem> OBD2Scanner::getPid(uint8_t pid) {
 std::vector<DecodedItem> OBD2Scanner::getDTCs() {
     generator->ShowDTCs();
     auto startTime = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(7000);
+    auto timeout = std::chrono::milliseconds(1000);
     while (true)
     {
         IObd2Modes* mode = receiver->ReceiveFrames();
@@ -66,6 +66,7 @@ std::vector<DecodedItem> OBD2Scanner::getFreezFrame(uint8_t pid) {
         auto now = std::chrono::steady_clock::now();
         if (now - startTime >= timeout) {
             LOG_ERR("Timeout waiting for PID response");
+            break;
         }
     }
     return {};
@@ -85,6 +86,7 @@ std::vector<DecodedItem> OBD2Scanner::getPendingDTCs() {
         auto now = std::chrono::steady_clock::now();
         if (now - startTime >= timeout) {
             LOG_ERR("Timeout waiting for PID response");
+            break;
         }
     }
     return {};
@@ -104,6 +106,7 @@ std::vector<DecodedItem> OBD2Scanner::getPermanentDTCs() {
         auto now = std::chrono::steady_clock::now();
         if (now - startTime >= timeout) {
             LOG_ERR("Timeout waiting for PID response");
+            break;
         }
     }
     return {};
@@ -123,6 +126,7 @@ std::vector<DecodedItem> OBD2Scanner::ClearDTCs() {
         auto now = std::chrono::steady_clock::now();
         if (now - startTime >= timeout) {
             LOG_ERR("Timeout waiting for PID response");
+            break;
         }
     }
     return {};
