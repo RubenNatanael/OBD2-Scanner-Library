@@ -24,7 +24,17 @@ int main(int argc, char *argv[])
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
 
-    OBD2Scanner obd("vcan0");
+    // Using socket CAN
+    ICANInterface* transport = new SocketCAN();
+    transport->init("vcan0");
+
+    // Using ELM327 protocol
+    /* ICANInterface* transport = new ELM327Transport();
+    if (!transport->init("/dev/pts/3")) {
+        exit(1);
+    } */
+    OBD2Scanner obd(transport);
+
 
     // --- Button 1: Get DTCs ---
     {

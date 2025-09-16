@@ -1,8 +1,8 @@
 #include "../include/OBD2Scanner.h"
 
-OBD2Scanner::OBD2Scanner(std::string interfaceName) {
-    transport = new SocketCAN();
-    transport->init(interfaceName);
+OBD2Scanner::OBD2Scanner(ICANInterface *transporter) {
+    //transport = new SocketCAN();
+    transport = transporter;
     generator = new GenerateFrame(*transport);
     receiver = new ReceiverFrames(*transport);
 }
@@ -11,7 +11,7 @@ std::vector<DecodedItem> OBD2Scanner::getPid(uint8_t pid) {
     
     generator->ShowCurrentData(pid);
     auto startTime = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(1000);
+    auto timeout = std::chrono::milliseconds(10000);
     while (true)
     {
         IObd2Modes* mode = receiver->ReceiveFrames();

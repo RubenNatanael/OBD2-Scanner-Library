@@ -5,11 +5,7 @@
 #include <vector>
 #include <string>
 #include "TroubleCodes.h"
-
-struct DecodedItem {
-    std::string label;  // Ex: "RPM"
-    std::string value;  // Ex: "2300 rpm"
-};
+#include "ResponseStructure.h"
 
 using DecoderFunc = std::vector<DecodedItem> (*)(const uint8_t* data, uint8_t len);
 
@@ -18,7 +14,10 @@ struct PIDEntry {
     DecoderFunc decoder;
 };
 
+/* Mode1Pid class can be use by both, mode1 and mode 2*/
 class Mode1Pid {
+private:
+uint8_t mode;
 
 public:
 // PID 0x00: Supported PIDs 01–20

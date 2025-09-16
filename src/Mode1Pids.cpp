@@ -81,6 +81,8 @@ std::vector<DecodedItem> Mode1Pid::DecodePID00(const uint8_t* data, uint8_t len)
         for (int bit = 7; bit >= 0; --bit) {
             if (data[byteIndex] & (1 << bit)) {
                 result.push_back({
+                    0x01,
+                    0x00,
                     "Supported PID",
                     std::to_string(byteIndex*8 + (8-bit))
                 });
@@ -103,11 +105,11 @@ std::vector<DecodedItem> Mode1Pid::DecodePID01(const uint8_t* data, uint8_t len)
     bool commonComplete = ((B >> 4) & 0x07) == (B & 0x07);
     bool engineComplete = C == D;
 
-    result.push_back({"MIL", milOn ? "ON" : "OFF"});
-    result.push_back({"DTC Count", std::to_string(dtcCount)});
-    result.push_back({"Engine Type", isDiesel ? "Diesel" : "Gasoline"});
-    result.push_back({"Common Tests Completed", commonComplete ? "Yes" : "No"});
-    result.push_back({"Engine Tests Completed", engineComplete ? "Yes" : "No"});
+    result.push_back({0x01,0x1, "MIL", milOn ? "ON" : "OFF"});
+    result.push_back({0x01,0x1, "DTC Count", std::to_string(dtcCount)});
+    result.push_back({0x01,0x1, "Engine Type", isDiesel ? "Diesel" : "Gasoline"});
+    result.push_back({0x01,0x1, "Common Tests Completed", commonComplete ? "Yes" : "No"});
+    result.push_back({0x01,0x1, "Engine Tests Completed", engineComplete ? "Yes" : "No"});
 
     return result;
 }
@@ -141,11 +143,11 @@ std::vector<DecodedItem> Mode1Pid::DecodePID02(const uint8_t* data, uint8_t len)
         char buf[6];
         snprintf(buf, sizeof(buf), "%1X%1X%1X%1X", digit1, digit2, digit3, digit4);
         std::string DTC = letter + std::string(buf);
-        result.push_back({"DTC: ",Parse(DTC)});
+        result.push_back({0x01,0x2, "DTC: ",Parse(DTC)});
         }
     
     if (result.empty()) {
-        result.push_back({"Erro: Not found","1"});
+        result.push_back({0x01,0x2, "Erro: Not found","1"});
     }
     return result;
 }
@@ -181,7 +183,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID03(const uint8_t* data, uint8_t len)
         text = data[0] + "Invalide response";
         break;
     }
-    result.push_back({"Fuel System Status", text});
+    result.push_back({0x01,0x3, "Fuel System Status", text});
     return result;
 }
 
@@ -190,7 +192,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID04(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len < 1) return result;
     float procentage = (float)data[0] * 2.55;
-    result.push_back({"Engine Load", std::to_string(procentage) + " %"});
+    result.push_back({0x01,0x4, "Engine Load", std::to_string(procentage) + " %"});
     return result;
 }
 
@@ -198,7 +200,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID04(const uint8_t* data, uint8_t len)
 std::vector<DecodedItem> Mode1Pid::DecodePID05(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
     if (len < 1) return result;
-    result.push_back({"Coolant Temp", std::to_string((int)data[0]-40) + " °C"});
+    result.push_back({0x01,0x5, "Coolant Temp", std::to_string((int)data[0]-40) + " °C"});
     return result;
 }
 
@@ -207,7 +209,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID06(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
-    result.push_back({"STFT-Bank 1", std::to_string(procentage) + " %"});
+    result.push_back({0x01,0x6, "STFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
 }
 
@@ -216,7 +218,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID07(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
-    result.push_back({"LTFT-Bank 1", std::to_string(procentage) + " %"});
+    result.push_back({0x01,0x7, "LTFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
 }
 
@@ -225,7 +227,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID08(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
-    result.push_back({"STFT-Bank 1", std::to_string(procentage) + " %"});
+    result.push_back({0x01,0x8, "STFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
 }
 
@@ -234,7 +236,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID09(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len < 1) return result;
     float procentage = ((float)data[0] / 1.28) - 100;
-    result.push_back({"LTFT-Bank 1", std::to_string(procentage) + " %"});
+    result.push_back({0x01,0x9, "LTFT-Bank 1", std::to_string(procentage) + " %"});
     return result;
 }
 
@@ -243,7 +245,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0A(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len < 1) return result;
     int presure = data[0] * 3;
-    result.push_back({"Fuel Presure", std::to_string(presure) + " kPa"});
+    result.push_back({0x01,0xA, "Fuel Presure", std::to_string(presure) + " kPa"});
     return result;
 }
 
@@ -251,7 +253,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0A(const uint8_t* data, uint8_t len)
 std::vector<DecodedItem> Mode1Pid::DecodePID0B(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
     if (len < 1) return result;
-    result.push_back({"Intake manifold absolute pressure", std::to_string(data[0]) + " kPa"});
+    result.push_back({0x01,0xB, "Intake manifold absolute pressure", std::to_string(data[0]) + " kPa"});
     return result;
 }
 
@@ -261,7 +263,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0C(const uint8_t* data, uint8_t len)
     if (len < 2) return result;
     int raw = (data[0] << 8) | data[1];
     float rpm = raw / 4.0f;
-    result.push_back({"RPM", std::to_string(rpm) + " rpm"});
+    result.push_back({0x01,0xC, "RPM", std::to_string(rpm) + " rpm"});
     return result;
 }
 
@@ -269,7 +271,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0C(const uint8_t* data, uint8_t len)
 std::vector<DecodedItem> Mode1Pid::DecodePID0D(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
     if (len < 1) return result;
-    result.push_back({"Speed", std::to_string(data[0]) + " km/h"});
+    result.push_back({0x01,0xD, "Speed", std::to_string(data[0]) + " km/h"});
     return result;
 }
 
@@ -278,6 +280,8 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0E(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         DecodedItem r;
+        r.mode = 1;
+        r.pid = 0x0E;
         r.label = "Timing Advance";
         r.value = std::to_string(data[0]/2.0f - 64) + " °BTDC"; // formula per SAE J1979
         result.push_back(r);
@@ -289,7 +293,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID0E(const uint8_t* data, uint8_t len)
 std::vector<DecodedItem> Mode1Pid::DecodePID0F(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
     if (len >= 1) {
-        result.push_back({"Intake Air Temp", std::to_string(data[0] - 40) + " °C"});
+        result.push_back({0x01,0xF, "Intake Air Temp", std::to_string(data[0] - 40) + " °C"});
     }
     return result;
 }
@@ -299,7 +303,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID10(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         float maf = ((data[0] << 8) | data[1]) / 100.0f;
-        result.push_back({"Mass Air Flow Rate", std::to_string(maf) + " g/s"});
+        result.push_back({0x01,0x10, "Mass Air Flow Rate", std::to_string(maf) + " g/s"});
     }
     return result;
 }
@@ -308,7 +312,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID10(const uint8_t* data, uint8_t len)
 std::vector<DecodedItem> Mode1Pid::DecodePID11(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
     if (len >= 1) {
-        result.push_back({"Throttle Position", std::to_string(data[0] * 100.0f / 255.0f) + " %"});
+        result.push_back({0x01,0x11, "Throttle Position", std::to_string(data[0] * 100.0f / 255.0f) + " %"});
     }
     return result;
 }
@@ -318,7 +322,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID12(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         std::string v = (data[0] == 0) ? "Not Commanded" : "Commanded";
-        result.push_back({"Secondary Air Status", v});
+        result.push_back({0x01,0x12, "Secondary Air Status", v});
     }
     return result;
 }
@@ -326,7 +330,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID12(const uint8_t* data, uint8_t len)
 // PID 0x13: O2 Sensor Present Bank 1 Sensor 1
 std::vector<DecodedItem> Mode1Pid::DecodePID13(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
-    if (len >= 1) result.push_back({"O2 Sensor B1 S1", (data[0] ? "Present" : "Not Present")});
+    if (len >= 1) result.push_back({0x01,0x13, "O2 Sensor B1 S1", (data[0] ? "Present" : "Not Present")});
     return result;
 }
 
@@ -337,7 +341,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID14to1B(const uint8_t* data, uint8_t 
         float voltage = data[0] / 200.0f; 
         std::string stft = (data[1] == 0xFF) ? "Not used" 
                                                : std::to_string((100.0f/128.0f)*data[1] - 100.0f) + " %";
-        result.push_back({"O2 Sensor B1 S" , "Voltage: " + std::to_string(voltage) + " V, STFT: " + stft});
+        result.push_back({0x01,0x14, "O2 Sensor B1 S" , "Voltage: " + std::to_string(voltage) + " V, STFT: " + stft});
     }
     return result;
 }
@@ -347,7 +351,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID1F(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int seconds = (data[0] << 8) | data[1];
-        result.push_back({"Run Time Since Engine Start", std::to_string(seconds) + " s"});
+        result.push_back({0x01,0x1F, "Run Time Since Engine Start", std::to_string(seconds) + " s"});
     }
     return result;
 }
@@ -359,7 +363,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID20(const uint8_t* data, uint8_t len)
     for (int byteIndex = 0; byteIndex < len; ++byteIndex) {
         for (int bit = 7; bit >= 0; --bit) {
             if (data[byteIndex] & (1 << bit)) {
-                result.push_back({"Supported PID", std::to_string(byteIndex * 8 + (8 - bit) + 0x20)});
+                result.push_back({0x01,0x20, "Supported PID", std::to_string(byteIndex * 8 + (8 - bit) + 0x20)});
             }
         }
     }
@@ -371,7 +375,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID21(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int km = (data[0] << 8) | data[1];
-        result.push_back({"Distance with MIL On", std::to_string(km) + " km"});
+        result.push_back({0x01,0x21, "Distance with MIL On", std::to_string(km) + " km"});
     }
     return result;
 }
@@ -381,7 +385,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID22(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int kPa = ((data[0] << 8) | data[1]) * 0.079; // spec: (A*256 + B) * 0.079 kPa
-        result.push_back({"Fuel Rail Pressure (Relative)", std::to_string(kPa) + " kPa"});
+        result.push_back({0x01,0x22, "Fuel Rail Pressure (Relative)", std::to_string(kPa) + " kPa"});
     }
     return result;
 }
@@ -391,7 +395,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID23(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int kPa = ((data[0] << 8) | data[1]) * 10; // spec: (A*256 + B) * 10 kPa
-        result.push_back({"Fuel Rail Gauge Pressure", std::to_string(kPa) + " kPa"});
+        result.push_back({0x01,0x23, "Fuel Rail Gauge Pressure", std::to_string(kPa) + " kPa"});
     }
     return result;
 }
@@ -401,7 +405,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID2C(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float percent = data[0] * 100.0f / 255.0f;
-        result.push_back({"Commanded EGR", std::to_string(percent) + " %"});
+        result.push_back({0x01,0x2C, "Commanded EGR", std::to_string(percent) + " %"});
     }
     return result;
 }
@@ -411,7 +415,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID2D(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float percent = (data[0] * 100.0f / 128.0f) - 100.0f;
-        result.push_back({"EGR Error", std::to_string(percent) + " %"});
+        result.push_back({0x01,0x2D, "EGR Error", std::to_string(percent) + " %"});
     }
     return result;
 }
@@ -421,7 +425,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID2E(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float percent = data[0] * 100.0f / 255.0f;
-        result.push_back({"Commanded Evaporative Purge", std::to_string(percent) + " %"});
+        result.push_back({0x01,0x2E, "Commanded Evaporative Purge", std::to_string(percent) + " %"});
     }
     return result;
 }
@@ -431,7 +435,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID2F(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float percent = data[0] * 100.0f / 255.0f;
-        result.push_back({"Fuel Tank Level Input", std::to_string(percent) + " %"});
+        result.push_back({0x01,0x2F, "Fuel Tank Level Input", std::to_string(percent) + " %"});
     }
     return result;
 }
@@ -441,7 +445,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID30(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         int count = data[0];
-        result.push_back({"Warm-ups Since Codes Cleared", std::to_string(count)});
+        result.push_back({0x01,0x30, "Warm-ups Since Codes Cleared", std::to_string(count)});
     }
     return result;
 }
@@ -451,7 +455,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID31(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int km = (data[0] << 8) | data[1];
-        result.push_back({"Distance Since Codes Cleared", std::to_string(km) + " km"});
+        result.push_back({0x01,0x31, "Distance Since Codes Cleared", std::to_string(km) + " km"});
     }
     return result;
 }
@@ -461,7 +465,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID32(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int Pa = ((data[0] << 8) | data[1]) / 4;
-        result.push_back({"Evap System Vapor Pressure", std::to_string(Pa) + " Pa"});
+        result.push_back({0x01,0x32, "Evap System Vapor Pressure", std::to_string(Pa) + " Pa"});
     }
     return result;
 }
@@ -471,7 +475,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID33(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         int kPa = data[0];
-        result.push_back({"Absolute Barometric Pressure", std::to_string(kPa) + " kPa"});
+        result.push_back({0x01,0x33, "Absolute Barometric Pressure", std::to_string(kPa) + " kPa"});
     }
     return result;
 }
@@ -484,6 +488,8 @@ std::vector<DecodedItem> Mode1Pid::DecodePID40(const uint8_t* data, uint8_t len)
         for (int bit = 7; bit >= 0; --bit) {
             if (data[byteIndex] & (1 << bit)) {
                 result.push_back({
+                    0X01,
+                    0X40,
                     "Supported PID",
                     "0x" + std::to_string(0x41 + byteIndex*8 + (7-bit))
                 });
@@ -497,9 +503,9 @@ std::vector<DecodedItem> Mode1Pid::DecodePID40(const uint8_t* data, uint8_t len)
 std::vector<DecodedItem> Mode1Pid::DecodePID41(const uint8_t* data, uint8_t len) {
     std::vector<DecodedItem> result;
     if (len >= 4) {
-        result.push_back({"Misfire Monitoring Complete", (data[0] & 0x01) ? "Yes" : "No"});
-        result.push_back({"Fuel System Monitoring Complete", (data[0] & 0x02) ? "Yes" : "No"});
-        result.push_back({"Components Monitoring Complete", (data[0] & 0x04) ? "Yes" : "No"});
+        result.push_back({0x01,0x41, "Misfire Monitoring Complete", (data[0] & 0x01) ? "Yes" : "No"});
+        result.push_back({0x01,0x41, "Fuel System Monitoring Complete", (data[0] & 0x02) ? "Yes" : "No"});
+        result.push_back({0x01,0x41, "Components Monitoring Complete", (data[0] & 0x04) ? "Yes" : "No"});
     }
     return result;
 }
@@ -509,7 +515,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID42(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         float voltage = ((data[0] << 8) | data[1]) / 1000.0f;
-        result.push_back({"Control Module Voltage", std::to_string(voltage) + " V"});
+        result.push_back({0x01,0x42, "Control Module Voltage", std::to_string(voltage) + " V"});
     }
     return result;
 }
@@ -519,7 +525,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID43(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         float load = ((data[0] << 8) | data[1]) * 100.0f / 255.0f;
-        result.push_back({"Absolute Load Value", std::to_string(load) + " %"});
+        result.push_back({0x01,0x43, "Absolute Load Value", std::to_string(load) + " %"});
     }
     return result;
 }
@@ -529,7 +535,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID44(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         float ratio = ((data[0] << 8) | data[1]) / ( 2 / 65536.0f);
-        result.push_back({"Commanded Equivalence Ratio", std::to_string(ratio)});
+        result.push_back({0x01,0x44, "Commanded Equivalence Ratio", std::to_string(ratio)});
     }
     return result;
 }
@@ -539,7 +545,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID45(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Relative Throttle Position", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x45, "Relative Throttle Position", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -549,7 +555,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID46(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         int temp = data[0] - 40;
-        result.push_back({"Ambient Air Temp", std::to_string(temp) + " °C"});
+        result.push_back({0x01,0x46, "Ambient Air Temp", std::to_string(temp) + " °C"});
     }
     return result;
 }
@@ -559,7 +565,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID47(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Throttle Position B", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x47, "Throttle Position B", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -569,7 +575,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID48(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Throttle Position C", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x48, "Throttle Position C", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -579,7 +585,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID49(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Accel Pedal Pos D", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x49, "Accel Pedal Pos D", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -589,7 +595,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID4A(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Accel Pedal Pos E", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x4A, "Accel Pedal Pos E", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -599,7 +605,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID4B(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Accel Pedal Pos F", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x4B, "Accel Pedal Pos F", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -609,7 +615,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID4C(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 1) {
         float pos = data[0] * 100.0f / 255.0f;
-        result.push_back({"Commanded Throttle Actuator", std::to_string(pos) + " %"});
+        result.push_back({0x01,0x4C, "Commanded Throttle Actuator", std::to_string(pos) + " %"});
     }
     return result;
 }
@@ -619,7 +625,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID4D(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int minutes = (data[0] << 8) | data[1];
-        result.push_back({"Time With MIL On", std::to_string(minutes) + " min"});
+        result.push_back({0x01,0x4D, "Time With MIL On", std::to_string(minutes) + " min"});
     }
     return result;
 }
@@ -629,7 +635,7 @@ std::vector<DecodedItem> Mode1Pid::DecodePID4E(const uint8_t* data, uint8_t len)
     std::vector<DecodedItem> result;
     if (len >= 2) {
         int minutes = (data[0] << 8) | data[1];
-        result.push_back({"Time Since DTCs Cleared", std::to_string(minutes) + " min"});
+        result.push_back({0x01,0x4E, "Time Since DTCs Cleared", std::to_string(minutes) + " min"});
     }
     return result;
 }

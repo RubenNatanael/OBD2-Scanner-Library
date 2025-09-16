@@ -5,6 +5,7 @@
 #include "MultiLogger.h"
 #include "Mode1Pids.h"
 #include "TroubleCodes.h"
+#include "ResponseStructure.h"
 
 #ifdef ARDUINO
 
@@ -88,6 +89,7 @@ public:
     IObd2Modes* ReceiveFrames();
 private:
     bool readAndAssembleFrames();
+    bool isNotDtcFrame(uint8_t mode);
 };
 
 #endif

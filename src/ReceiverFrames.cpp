@@ -41,7 +41,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
     memset(flowControl.data, 0, 8);
     flowControl.data[0] = 0x30;
 
-    r.setTimeout(500);
+    r.setTimeout(5000);
 
     bool isMultipleFrame = false;
 
@@ -68,6 +68,11 @@ bool ReceiverFrames::readAndAssembleFrames() {
             receivedBytes += totalLength;
             LOG_INFO("Frame received");
             mode = frame.data[1];
+            /*
+             If is not a frame that request DTC, only one ECU will responde,
+             so is safe to finish the reading of frames here.
+            */
+            if (isNotDtcFrame(mode)) return true;
         }
 
         else if (frameType == 0x1 && (mode == 0 || mode == frame.data[2])) {
@@ -88,6 +93,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
             if (receivedBytes >= totalLength) {
                 LOG_INFO("All frames received");
                 isMultipleFrame = false;
+                if (isNotDtcFrame(mode)) return true;
             }
         }
     }
@@ -118,7 +124,7 @@ std::vector<DecodedItem> Mode1::Decodify() {
 
     // Unknown PID
     std::vector<DecodedItem> r;
-    r.push_back({"Erro: Not found", "1"});
+    r.push_back({0x01,pid, "Erro: Not found", "1"});
     return r;
 }
 
@@ -131,25 +137,24 @@ std::vector<DecodedItem> Mode3::Decodify() {
     std::vector<DecodedItem> r;
 
     if (receivedBytes == 1) {
-        r.push_back({"No DTCs founded","0"});
+        r.push_back({0x03,0x0,"No DTCs founded","0"});
         return r;
     }
 
     uint8_t *dtcs = responseBuffer + 1;
-    uint8_t newLength = receivedBytes - 1;
 
     uint8_t encodedDtc[2];
 
 
-    for (int i = 0; i < newLength / 2; i++) {
+    for (int i = 0; i < receivedBytes / 2; i++) {
         encodedDtc[0] = dtcs[i * 2];
         encodedDtc[1] = dtcs[(i * 2) + 1];
         std::string dtc = DecodifyDTC(encodedDtc);
-        r.push_back({"DTC: ",Parse(dtc)});
+        r.push_back({0x03,0x0,"DTC: ",Parse(dtc)});
     }
     
     if (r.empty()) {
-        r.push_back({"Erro: Not found","1"});
+        r.push_back({0x03,0x0,"Erro: Not found","1"});
     }
 
     return r;
@@ -190,9 +195,9 @@ std::vector<DecodedItem> Mode4::Decodify() {
     std::vector<DecodedItem> r;
     
     if (responseBuffer[0] == 0x44) {
-        r.push_back({"All DTCs deleted", "0"});
+        r.push_back({0x04,0x0,"All DTCs deleted", "0"});
     } else {
-        r.push_back({"Error", "-1"});
+        r.push_back({0x04,0x0,"Error", "-1"});
     }
     
     return r;
@@ -201,12 +206,18 @@ std::vector<DecodedItem> Mode4::Decodify() {
 std::vector<DecodedItem> ModeDefault::Decodify() {
     std::vector<DecodedItem> r;
     
-    r.push_back({"", ""});
+    r.push_back({0x03,0x0,"", ""});
     
     return r;
 }
 
 bool IObd2Modes::ContainsPid(uint8_t pid) {
     return responseBuffer[1] == pid;
+}
+
+bool ReceiverFrames::isNotDtcFrame(uint8_t mode) {
+    return (mode != 0x03 &&
+        mode != 0x07 &&
+        mode != 0x0A);
 }
 

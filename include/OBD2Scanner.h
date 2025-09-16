@@ -84,7 +84,7 @@ class OBD2Scanner {
     ReceiverFrames* receiver;
 
     public:
-        OBD2Scanner(std::string interfaceName);
+        OBD2Scanner(ICANInterface *transporter);
         std::vector<DecodedItem> getPid(uint8_t pid);
         std::vector<DecodedItem> getDTCs();
         std::vector<DecodedItem> getFreezFrame(uint8_t pid);
