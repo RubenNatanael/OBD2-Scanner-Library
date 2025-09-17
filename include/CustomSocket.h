@@ -60,6 +60,8 @@
     #include <algorithm>
 
     class ICANInterface {
+    protected:
+        int broadcast_id = 0x07DF;
     public:
         virtual bool init(const std::string& iface) = 0;
         virtual bool send(const can_frame& frame) = 0;
