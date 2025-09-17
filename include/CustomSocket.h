@@ -34,34 +34,26 @@
     };
 
 #else   // PC / Desktop
+
+    #include <queue>
+    #include <iomanip>
+    #include <cstring>
+    #include <chrono>
+    #include <vector>
+    #include <string>
+    #include <mutex>
+
     #include <linux/can.h>
     #include <linux/can/raw.h>
     #include <sys/socket.h>
     #include <net/if.h>
     #include <unistd.h>
     #include <sys/ioctl.h>
-    #include <queue>
-    #include <fstream>
-    #include <sstream>
-    #include <iomanip>
-
     #include <termios.h>
-    #include <fcntl.h>
-    #include <unistd.h>
-    #include <sys/select.h>
-    #include <sys/time.h>
-    #include <cerrno>
-    #include <cstring>
-    #include <cctype>
-    #include <chrono>
-    #include <iostream>
-    #include <vector>
-    #include <string>
-    #include <algorithm>
 
     class ICANInterface {
     protected:
-        int broadcast_id = 0x07DF;
+        uint32_t broadcast_id = 0x07DF;
     public:
         virtual bool init(const std::string& iface) = 0;
         virtual bool send(const can_frame& frame) = 0;
@@ -107,6 +99,7 @@
         int fd;
         int timeoutMs;
         std::queue<can_frame> frameQueue;
+        std::mutex ioMutex;
 
         bool set_raw_mode(int fd, speed_t baud);
         ssize_t write_all(const std::string &s);

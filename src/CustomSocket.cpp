@@ -120,7 +120,7 @@ void ELM327Transport::sendRaw(const std::string& cmd) {
     write(fd, cmd.c_str(), cmd.size());
 }
 
-std::string read_until_prompt(int fd, int timeoutSeconds) {
+std::string ELM327Transport::read_until_prompt(int timeoutSeconds) {
     std::string out;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
 
@@ -183,7 +183,7 @@ void ELM327Transport::closePort() {
 bool ELM327Transport::send(const can_frame &frame) {
     if (fd < 0) return false;
 
-
+ 
     std::string r;
     if (frame.can_id != broadcast_id) {
         std::string sh = "AT SH " + to_upper_hex(frame.can_id) + "\r";
@@ -200,7 +200,7 @@ bool ELM327Transport::send(const can_frame &frame) {
     payload << "\r";
     sendRaw(payload.str());
 
-    r = read_until_prompt(2);
+    r = read_until_prompt(1);
     (void)r;
 
     return true;
@@ -314,6 +314,8 @@ void ELM327Transport::splitPayloadIntoFrames(const std::vector<uint8_t>& payload
 
 bool ELM327Transport::receive(can_frame& frame) {
 
+    std::lock_guard<std::mutex> lock(ioMutex);
+    
     if (!frameQueue.empty()) {
         frame = frameQueue.front();
         frameQueue.pop();
