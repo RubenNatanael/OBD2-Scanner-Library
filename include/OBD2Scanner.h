@@ -2,6 +2,7 @@
 #define OBD2_SCANNER
 
 #include <chrono>
+#include <functional>
 
 #include "MultiLogger.h"
 #include "CustomSocket.h"
@@ -86,11 +87,17 @@ class OBD2Scanner {
     public:
         OBD2Scanner(ICANInterface *transporter);
         std::vector<DecodedItem> getPid(uint8_t pid);
+        void getPid(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> getDTCs();
+        void getDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> getFreezFrame(uint8_t pid);
+        void getFreezFrame(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> getPermanentDTCs();
+        void getPermanentDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> getPendingDTCs();
+        void getPendingDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> ClearDTCs();
+        void ClearDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
         
         ~OBD2Scanner();
 };

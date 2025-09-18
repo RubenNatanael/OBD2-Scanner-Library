@@ -3787,5 +3787,5 @@ int FindDtcInList(int start, int end, const std::string &DtcCode) {
 
 std::string Parse(std::string &DtcCode) {
     int DtcDescriptionIndex = FindDtcInList(0, troubleCodesCount, DtcCode);
-    return DtcDescriptionIndex !=1 ? troubleCodes[DtcDescriptionIndex] : "DTC NOT Found";
+    return DtcDescriptionIndex != -1 ? troubleCodes[DtcDescriptionIndex] : (DtcCode + ": DTC NOT Found in Local Data Base");
 }

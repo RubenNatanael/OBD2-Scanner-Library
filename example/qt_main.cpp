@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QString>
+#include <QtConcurrent/QtConcurrent>
 #include "../include/OBD2Scanner.h"
 
 static QString vectorToQString(const std::vector<DecodedItem>& vec) {
@@ -25,14 +26,14 @@ int main(int argc, char *argv[])
     QVBoxLayout *mainLayout = new QVBoxLayout;
 
     // Using socket CAN
-    ICANInterface* transport = new SocketCAN();
-    transport->init("vcan0");
+    // ICANInterface* transport = new SocketCAN();
+    // transport->init("vcan0");
 
     // Using ELM327 protocol
-    /* ICANInterface* transport = new ELM327Transport();
+    ICANInterface* transport = new ELM327Transport();
     if (!transport->init("/dev/pts/3")) {
         exit(1);
-    } */
+    } 
     OBD2Scanner obd(transport);
 
 
@@ -61,9 +62,16 @@ int main(int argc, char *argv[])
         row->addWidget(label);
 
         QObject::connect(button, &QPushButton::clicked, [label, &obd]() {
-            auto res = obd.getPid(OBD2::Pid::Supported0);
-            label->setText(vectorToQString(res));
+            // run in background
+            QtConcurrent::run([label, &obd]() {
+                obd.getPid(OBD2::Pid::Supported0, [label](const std::vector<DecodedItem>& res) {
+                    QMetaObject::invokeMethod(label, [label, res]() {
+                        label->setText(vectorToQString(res));
+                    });
+                });
+            });
         });
+
 
         mainLayout->addLayout(row);
     }
