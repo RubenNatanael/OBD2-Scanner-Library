@@ -161,7 +161,7 @@ bool ELM327Transport::init(const std::string& serialPort) {
     sendRaw("ATSP0\r"); // automatic protocol
     r = read_until_prompt(1);
 
-    sendRaw("AT SH " + to_upper_hex(broadcast_id) +"\r"); // set id
+    sendRaw("AT SH " + to_upper_hex(broadcast_id) +"\r"); // set id for broadcast
     r = read_until_prompt(1);
 
     sendRaw("AT CAF0\r");   // set raw mode once
@@ -185,7 +185,7 @@ bool ELM327Transport::send(const can_frame &frame) {
 
  
     std::string r;
-    if (frame.can_id != broadcast_id) {
+    if (frame.can_id != last_id) {
         std::string sh = "AT SH " + to_upper_hex(frame.can_id) + "\r";
         sendRaw(sh);
         r = read_until_prompt(1);
@@ -315,7 +315,7 @@ void ELM327Transport::splitPayloadIntoFrames(const std::vector<uint8_t>& payload
 bool ELM327Transport::receive(can_frame& frame) {
 
     std::lock_guard<std::mutex> lock(ioMutex);
-    
+
     if (!frameQueue.empty()) {
         frame = frameQueue.front();
         frameQueue.pop();

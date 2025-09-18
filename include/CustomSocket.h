@@ -53,7 +53,8 @@
 
     class ICANInterface {
     protected:
-        uint32_t broadcast_id = 0x07DF;
+        const uint32_t broadcast_id = 0x07DF;
+        uint32_t last_id = broadcast_id;
     public:
         virtual bool init(const std::string& iface) = 0;
         virtual bool send(const can_frame& frame) = 0;
