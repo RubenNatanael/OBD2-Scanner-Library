@@ -10,7 +10,7 @@ std::vector<DecodedItem> OBD2Scanner::getPid(uint8_t pid) {
     
     generator->ShowCurrentData(pid);
     auto startTime = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(2000);
+    auto timeout = std::chrono::milliseconds(1000);
     while (true)
     {
         IObd2Modes* mode = receiver->ReceiveFrames();
@@ -26,20 +26,20 @@ std::vector<DecodedItem> OBD2Scanner::getPid(uint8_t pid) {
             break;
         }
     }
-    return {};
+    return {{00,00,"No response", "-1"}};
 }
 
-void OBD2Scanner::getPid(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> func) {
+void OBD2Scanner::getPid(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback) {
     
     generator->ShowCurrentData(pid);
     auto startTime = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(2000);
+    auto timeout = std::chrono::milliseconds(1000);
     while (true)
     {
         IObd2Modes* mode = receiver->ReceiveFrames();
         if (mode == &receiver->mode1) {
             if (mode->ContainsPid(pid)) {
-                func(mode->Decodify());
+                callback(mode->Decodify());
                 return;
             }
         }
@@ -50,6 +50,7 @@ void OBD2Scanner::getPid(uint8_t pid, std::function<void(const std::vector<Decod
             break;
         }
     }
+    callback({{00,00,"No response", "-1"}});
 }
 
 std::vector<DecodedItem> OBD2Scanner::getDTCs() {
@@ -69,7 +70,7 @@ std::vector<DecodedItem> OBD2Scanner::getDTCs() {
             break;
         }
     }
-    return {};
+    return {{00,00,"No response", "-1"}};
 }
 
 void OBD2Scanner::getDTCs(std::function<void(const std::vector<DecodedItem>&)> callback) {
@@ -90,6 +91,7 @@ void OBD2Scanner::getDTCs(std::function<void(const std::vector<DecodedItem>&)> c
             break;
         }
     }
+    callback({{00,00,"No response", "-1"}});
 }
 
 std::vector<DecodedItem> OBD2Scanner::getFreezFrame(uint8_t pid) {
@@ -111,7 +113,7 @@ std::vector<DecodedItem> OBD2Scanner::getFreezFrame(uint8_t pid) {
             break;
         }
     }
-    return {};
+    return {{00,00,"No response", "-1"}};
 }
 
 void OBD2Scanner::getFreezFrame(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback) {
@@ -134,6 +136,7 @@ void OBD2Scanner::getFreezFrame(uint8_t pid, std::function<void(const std::vecto
             break;
         }
     }
+    callback({{00,00,"No response", "-1"}});
 }
 
 std::vector<DecodedItem> OBD2Scanner::getPendingDTCs() {
@@ -153,7 +156,7 @@ std::vector<DecodedItem> OBD2Scanner::getPendingDTCs() {
             break;
         }
     }
-    return {};
+    return {{00,00,"No response", "-1"}};
 }
 
 void OBD2Scanner::getPendingDTCs(std::function<void(const std::vector<DecodedItem>&)> callback) {
@@ -173,6 +176,7 @@ void OBD2Scanner::getPendingDTCs(std::function<void(const std::vector<DecodedIte
             break;
         }
     }
+    callback({{00,00,"No response", "-1"}});
 }
 
 std::vector<DecodedItem> OBD2Scanner::getPermanentDTCs() {
@@ -192,7 +196,7 @@ std::vector<DecodedItem> OBD2Scanner::getPermanentDTCs() {
             break;
         }
     }
-    return {};
+    return {{00,00,"No response", "-1"}};
 }
 
 void OBD2Scanner::getPermanentDTCs(std::function<void(const std::vector<DecodedItem>&)> callback) {
@@ -213,6 +217,7 @@ void OBD2Scanner::getPermanentDTCs(std::function<void(const std::vector<DecodedI
             break;
         }
     }
+    callback({{00,00,"No response", "-1"}});
 }
 
 std::vector<DecodedItem> OBD2Scanner::ClearDTCs() {
@@ -232,7 +237,7 @@ std::vector<DecodedItem> OBD2Scanner::ClearDTCs() {
             break;
         }
     }
-    return {};
+    return {{00,00,"No response", "-1"}};
 }
 
 void OBD2Scanner::ClearDTCs(std::function<void(const std::vector<DecodedItem>&)> callback) {
@@ -253,6 +258,7 @@ void OBD2Scanner::ClearDTCs(std::function<void(const std::vector<DecodedItem>&)>
             break;
         }
     }
+    callback({{00,00,"No response", "-1"}});
 }
 
 OBD2Scanner::~OBD2Scanner() {

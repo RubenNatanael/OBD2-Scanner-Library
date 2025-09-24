@@ -75,5 +75,7 @@ Or use the helper script that does it automatically:
 #### 🔹 ELM327 
  - Now the library also supports real ELM327 adapters over USB or Bluetooth. You can connect your ELM327 and send/receive CAN frames directly.
  - This allows you to test both with the car simulator (/dev/pts/X) or a real car via ELM327.
- - In the example file, you can see how to create an ELM327 transport layer instead of a socket one. (Unfortunately, the example currently works only with a socket CAN, but using the library does not change at all.)
+ - In the example file, you can see how to create an ELM327 transport layer instead of a socket one. 
+ - You can use the Qt example (with the ELM327 transport class instead of SocketCAN) on a real ELM device connected to a car.✅
 
+![Alt text](images/qt_example.png)

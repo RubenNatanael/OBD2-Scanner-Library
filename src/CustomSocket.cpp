@@ -33,14 +33,20 @@ bool SocketCAN::init(const std::string& iface) {
     ioctl(sock, SIOCGIFINDEX, &ifr);
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
-    return bind(sock, (struct sockaddr*)&addr, sizeof(addr)) >= 0;
-}
 
-void SocketCAN::setTimeout(int timeoutMs) {
+    setTimeout(500);
+    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        return false;
+    }
     struct timeval tv;
     tv.tv_sec  = timeoutMs / 1000;
     tv.tv_usec = (timeoutMs % 1000) * 1000;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    return true;
+}
+
+void SocketCAN::setTimeout(int timeoutMs) {
+    this->timeoutMs = timeoutMs;
 }
 
 bool SocketCAN::send(const can_frame& frame) {
@@ -71,8 +77,9 @@ SocketCAN::~SocketCAN() {
 }
 
 bool SocketCAN::isOBD2(can_frame& frame) {
-    LOG_INFO(std::to_string(frame.data[1]));
-    if (frame.data[0] != 0x10 && frame.data[1] < 0x4B && frame.data[1] > 0x40) {
+    if (frame.data[1] == 0x7F) {
+        return true;
+    } else if (frame.data[0] != 0x10 && frame.data[1] < 0x4B && frame.data[1] > 0x40) {
         return true;
     } else if( frame.data[0] == 0x10 && frame.data[2] < 0x4B && frame.data[2] > 0x40) {
         return true;
@@ -81,8 +88,6 @@ bool SocketCAN::isOBD2(can_frame& frame) {
     }
     return false;
 }
-
-ELM327Transport::ELM327Transport() : fd(-1), timeoutMs(1000) {}
 
 ELM327Transport::ELM327Transport(speed_t baudRate, char protocol) : baudRate(baudRate), protocol(protocol) {}
 
@@ -108,7 +113,7 @@ bool ELM327Transport::set_raw_mode(int fd, speed_t baud) {
     cfsetospeed(&tio, baud);
 
     tio.c_cc[VMIN] = 0;
-    tio.c_cc[VTIME] = 50;
+    tio.c_cc[VTIME] = timeoutMs / 100;
 
     // Saving settings
     if (tcsetattr(fd, TCSANOW, &tio) != 0) {
@@ -141,7 +146,7 @@ std::string ELM327Transport::read_until_prompt(int timeoutSeconds) {
     return out;
 }
 
-bool ELM327Transport::initChip(const std::string& serialPort) {
+bool ELM327Transport::initChip() {
 
     sendRaw("ATZ\r");   // reset
     std::string r = read_until_prompt(5);
@@ -221,7 +226,7 @@ bool ELM327Transport::init(const std::string& serialPort) {
 
     // Change here max value to set max no. of attemps
     for (int i = 0; i < 2; i++) {
-        if (initChip(serialPort)) {
+        if (initChip()) {
             initialized = true;
             break;
         }
@@ -256,6 +261,7 @@ bool ELM327Transport::send(const can_frame &frame) {
     for (int i = 1; i <= frame.data[0]; ++i) {
         payload << std::setw(2) << (static_cast<int>(frame.data[i]) & 0xFF);
     }
+
     payload << "\r";
     LOG_INFO(payload.str());
     sendRaw(payload.str());
@@ -268,10 +274,7 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
     if (fd < 0) return false;
 
     std::string raw = read_until_prompt(5);
-    LOG_WARN("rrr " + raw);
     if (raw.empty()) return false;
-    LOG_WARN("here1 " + raw);
-
 
     raw.erase(std::remove(raw.begin(), raw.end(), '>'), raw.end());
 
@@ -318,11 +321,6 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
                 outPayload.push_back(static_cast<uint8_t>(v & 0xFF));
             } catch (...) { continue; }
         }
-    }
-    if (!outPayload.empty()) {
-        LOG_WARN(std::to_string(outPayload[0]));
-    } else {
-        LOG_WARN("is empty");
     }
 
     return !outPayload.empty();

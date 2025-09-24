@@ -41,11 +41,9 @@ bool ReceiverFrames::readAndAssembleFrames() {
     memset(flowControl.data, 0, 8);
     flowControl.data[0] = 0x30;
 
-    r.setTimeout(5000);
-
     bool isMultipleFrame = false;
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(400);
 
     __u8* temp_responseBuffer = responseBuffer + 1;
     uint8_t mode = 0;
@@ -56,6 +54,14 @@ bool ReceiverFrames::readAndAssembleFrames() {
         if (!r.receive(frame)) {
             if (!mode) LOG_WARN("Timeout, frame no received");
             break;
+        }
+
+        // Negative response for response pending
+        if (frame.data[1] == 0x7F && frame.data[3] == 0x78) {
+            // Wait 1 more second to receive response
+            LOG_INFO("Negative response, pending");
+            deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
+            continue;
         }
 
         uint8_t pci = frame.data[0];

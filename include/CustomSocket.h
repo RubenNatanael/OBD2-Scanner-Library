@@ -65,6 +65,7 @@
 
     class SocketCAN : public ICANInterface {
         int sock;
+        int timeoutMs = 500;
     public:
         bool init(const std::string& iface) override;
 
@@ -116,7 +117,7 @@
 
     private:
         int fd = -1;
-        int timeoutMs = 1000;
+        int timeoutMs = 500;
         speed_t baudRate = B38400;
         char protocol = '0';
         std::queue<can_frame> frameQueue;
@@ -128,7 +129,7 @@
         void sendRaw(const std::string& cmd);
         bool readFullResponse(std::vector<uint8_t>& outPayload);
         void splitPayloadIntoFrames(const std::vector<uint8_t>& payload);
-        bool initChip(const std::string& serialPort);
+        bool initChip();
 
         static std::string to_upper_hex(unsigned int x) {
             std::ostringstream ss; ss << std::hex << std::uppercase << x;
