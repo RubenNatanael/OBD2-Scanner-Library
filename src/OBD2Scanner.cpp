@@ -10,7 +10,7 @@ std::vector<DecodedItem> OBD2Scanner::getPid(uint8_t pid) {
     
     generator->ShowCurrentData(pid);
     auto startTime = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(10000);
+    auto timeout = std::chrono::milliseconds(2000);
     while (true)
     {
         IObd2Modes* mode = receiver->ReceiveFrames();
@@ -33,7 +33,7 @@ void OBD2Scanner::getPid(uint8_t pid, std::function<void(const std::vector<Decod
     
     generator->ShowCurrentData(pid);
     auto startTime = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(10000);
+    auto timeout = std::chrono::milliseconds(2000);
     while (true)
     {
         IObd2Modes* mode = receiver->ReceiveFrames();

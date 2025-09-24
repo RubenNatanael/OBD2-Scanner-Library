@@ -111,7 +111,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
 std::vector<DecodedItem> Mode1::Decodify() {
     uint8_t pid = responseBuffer[1];
     uint8_t* new_data = responseBuffer + 2;
-    uint8_t len = receivedBytes - 2;
+    uint8_t len = receivedBytes - 1;
 
     const PIDEntry* pidTable = Mode1Pid().getTable();
     uint8_t pidTableSize = Mode1Pid().pidTableSize;
@@ -141,12 +141,12 @@ std::vector<DecodedItem> Mode3::Decodify() {
         return r;
     }
 
-    uint8_t *dtcs = responseBuffer + 1;
+    uint8_t *dtcs = responseBuffer + 2;
 
     uint8_t encodedDtc[2];
 
 
-    for (int i = 0; i < receivedBytes / 2; i++) {
+    for (int i = 0; i < responseBuffer[1]; i++) {
         encodedDtc[0] = dtcs[i * 2];
         encodedDtc[1] = dtcs[(i * 2) + 1];
         std::string dtc = DecodifyDTC(encodedDtc);

@@ -1671,6 +1671,8 @@ const std::string troubleCodes[] = {
     "P2096: Post Catalyst Fuel Trim System Too Lean Bank 1",
     "P2135: Throttle/Pedal Position Sensor/Switch A / B Voltage Correlation",
     "P2138: Throttle/Pedal Position Sensor/Switch D/E Voltage Correlation.",
+    "P2452: Diesel Particulate Filter Pressure Sensor A Circuit.",
+    "P2453: Diesel Particulate Filter Pressure Sensor A Circuit Range/Performance",
     "B0028: Right Front Passenger Side Deployment Loop Resistance Low",
     "B1200: Climate Control Pushbutton Circuit Failure",
     "B1201: Fuel Sender Circuit Failure",

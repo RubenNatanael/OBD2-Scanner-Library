@@ -84,6 +84,8 @@ bool SocketCAN::isOBD2(can_frame& frame) {
 
 ELM327Transport::ELM327Transport() : fd(-1), timeoutMs(1000) {}
 
+ELM327Transport::ELM327Transport(speed_t baudRate, char protocol) : baudRate(baudRate), protocol(protocol) {}
+
 ELM327Transport::~ELM327Transport() { closePort(); }
 
 void ELM327Transport::setTimeout(int t) { timeoutMs = t; }
@@ -106,7 +108,7 @@ bool ELM327Transport::set_raw_mode(int fd, speed_t baud) {
     cfsetospeed(&tio, baud);
 
     tio.c_cc[VMIN] = 0;
-    tio.c_cc[VTIME] = 5;
+    tio.c_cc[VTIME] = 50;
 
     // Saving settings
     if (tcsetattr(fd, TCSANOW, &tio) != 0) {
@@ -123,17 +125,80 @@ void ELM327Transport::sendRaw(const std::string& cmd) {
 std::string ELM327Transport::read_until_prompt(int timeoutSeconds) {
     std::string out;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
+    char buf[128];
 
-    char buf[256];
     while (std::chrono::steady_clock::now() < deadline) {
         ssize_t n = read(fd, buf, sizeof(buf));
         if (n > 0) {
             out.append(buf, buf + n);
+            deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
             if (out.find('>') != std::string::npos) break;
+        }
+        else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
     }
     return out;
 }
+
+bool ELM327Transport::initChip(const std::string& serialPort) {
+
+    sendRaw("ATZ\r");   // reset
+    std::string r = read_until_prompt(5);
+    LOG_INFO("ATZ -> " + r);
+    usleep(1000000);
+
+
+    sendRaw("ATE0\r");  // disable echo (prevents duplicates)
+    r = read_until_prompt(5);
+    LOG_INFO("ATE0 -> " + r);
+    usleep(1000000);
+
+
+    sendRaw("ATL0\r");  // disable new line
+    r = read_until_prompt(5);
+    LOG_INFO("ATL0 -> " + r);
+    usleep(1000000);
+
+    std::string command = "ATSP" + std::string(1, protocol);
+    sendRaw(command + "\r"); // set protocol
+    r = read_until_prompt(5);
+    LOG_INFO(command + " -> " + r);
+
+    /* 
+        TODO: Need to activate raw mode and   AT CFC0 to manage manually multi frame.
+        Also, change receive frame, pci and id will be received
+    */
+    // sendRaw("AT SH " + to_upper_hex(broadcast_id) +"\r"); // set id for broadcast
+    // r = read_until_prompt(1);
+
+    // sendRaw("AT CAF0\r");   // set raw mode once
+    // r = read_until_prompt(1);
+
+    // sendRaw("AT CFC0\r");   // set flow controll on
+    // r = read_until_prompt(1);
+
+    bool protocolFound = false;
+    for (int i = 0; i < 7; i++) {
+        usleep(2000000);
+        sendRaw("0100\r");
+        std::string resp = read_until_prompt(3);
+        LOG_INFO("Test PID -> " + resp);
+
+        if (resp.find("41 00") != std::string::npos) {
+            LOG_INFO("Protocol detected and working");
+            protocolFound = true;
+            break;
+        }
+    }
+
+    if (!protocolFound) {
+        LOG_ERR("No protocol detected");
+        return false;
+    }
+    return true;
+}
+
 
 bool ELM327Transport::init(const std::string& serialPort) {
 
@@ -143,34 +208,26 @@ bool ELM327Transport::init(const std::string& serialPort) {
         return false;
     }
 
-    if (!set_raw_mode(fd, B38400)) {
+    if (!set_raw_mode(fd, baudRate)) {
         close(fd);
         fd = -1;
         return false;
     }
 
-    usleep(300);
+    usleep(2000000);
+    tcflush(fd, TCIFLUSH);
 
-    sendRaw("ATZ\r");   // reset
-    std::string r = read_until_prompt(2);
-    LOG_INFO("ATZ -> " + r);
+    bool initialized = false;
 
-    sendRaw("ATE0\r");  // disable echo (prevents duplicates)
-    r = read_until_prompt(1);
+    // Change here max value to set max no. of attemps
+    for (int i = 0; i < 2; i++) {
+        if (initChip(serialPort)) {
+            initialized = true;
+            break;
+        }
+    }
 
-    sendRaw("ATSP0\r"); // automatic protocol
-    r = read_until_prompt(1);
-
-    sendRaw("AT SH " + to_upper_hex(broadcast_id) +"\r"); // set id for broadcast
-    r = read_until_prompt(1);
-
-    sendRaw("AT CAF0\r");   // set raw mode once
-    r = read_until_prompt(1);
-
-    std::string leftover = read_until_prompt(1);
-    (void)leftover;
-
-    return true;
+    return initialized;
 }
 
 void ELM327Transport::closePort() {
@@ -181,27 +238,27 @@ void ELM327Transport::closePort() {
 }
 
 bool ELM327Transport::send(const can_frame &frame) {
+
+    std::lock_guard<std::mutex> lock(ioMutex);
+
     if (fd < 0) return false;
 
  
-    std::string r;
-    if (frame.can_id != last_id) {
-        std::string sh = "AT SH " + to_upper_hex(frame.can_id) + "\r";
-        sendRaw(sh);
-        r = read_until_prompt(1);
-    }
+    // std::string r;
+    // if (frame.can_id != last_id) {
+    //     std::string sh = "AT SH " + to_upper_hex(frame.can_id) + "\r";
+    //     sendRaw(sh);
+    //     r = read_until_prompt(1);
+    // }
 
     std::ostringstream payload;
     payload << std::uppercase << std::hex << std::setfill('0');
-    for (int i = 0; i < frame.can_dlc; ++i) {
-        if (i) payload << ' ';
+    for (int i = 1; i <= frame.data[0]; ++i) {
         payload << std::setw(2) << (static_cast<int>(frame.data[i]) & 0xFF);
     }
     payload << "\r";
+    LOG_INFO(payload.str());
     sendRaw(payload.str());
-
-    r = read_until_prompt(1);
-    (void)r;
 
     return true;
 }
@@ -210,8 +267,11 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
     outPayload.clear();
     if (fd < 0) return false;
 
-    std::string raw = read_until_prompt((timeoutMs + 999)/1000); // timeout in seconds
+    std::string raw = read_until_prompt(5);
+    LOG_WARN("rrr " + raw);
     if (raw.empty()) return false;
+    LOG_WARN("here1 " + raw);
+
 
     raw.erase(std::remove(raw.begin(), raw.end(), '>'), raw.end());
 
@@ -258,6 +318,11 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
                 outPayload.push_back(static_cast<uint8_t>(v & 0xFF));
             } catch (...) { continue; }
         }
+    }
+    if (!outPayload.empty()) {
+        LOG_WARN(std::to_string(outPayload[0]));
+    } else {
+        LOG_WARN("is empty");
     }
 
     return !outPayload.empty();

@@ -83,6 +83,24 @@
     class ELM327Transport: public ICANInterface {
     public:
         ELM327Transport();
+        
+        /**
+         * 
+         * @param baudRete B38400(default), B115200, B9600
+         * @param protocol
+         * '0 for "ATSP0" - Auto (default)
+         * '1' for "ATSP1" - SAE J1850 PWM
+         * '2' for "ATSP2" - SAE J1850 VPW
+         * '3' for "ATSP3" - ISO 9141-2
+         * '4' for "ATSP4" - ISO 14230-4 KWP
+         * '5' for "ATSP5" - ISO 14230-4SAE  KWP (fast init)
+         * '6' for "ATSP6" - ISO 15765-4 CAN (11 bit, 500 kbps)
+         * '7' for "ATSP7" - ISO 15765-4 CAN (29 bit, 500 kbps)
+         * '8' for "ATSP8" - ISO 15765-4 CAN (11 bit, 250 kbps)
+         * '9' for "ATSP9" - ISO 15765-4 CAN (29 bit, 250 kbps)
+         */
+        ELM327Transport(speed_t baudRate, char protocol);
+
         ~ELM327Transport();
 
         bool init(const std::string& serialPort) override;
@@ -97,8 +115,10 @@
         void closePort();
 
     private:
-        int fd;
-        int timeoutMs;
+        int fd = -1;
+        int timeoutMs = 1000;
+        speed_t baudRate = B38400;
+        char protocol = '0';
         std::queue<can_frame> frameQueue;
         std::mutex ioMutex;
 
@@ -108,8 +128,8 @@
         void sendRaw(const std::string& cmd);
         bool readFullResponse(std::vector<uint8_t>& outPayload);
         void splitPayloadIntoFrames(const std::vector<uint8_t>& payload);
+        bool initChip(const std::string& serialPort);
 
-        // helper: uppercase hex string
         static std::string to_upper_hex(unsigned int x) {
             std::ostringstream ss; ss << std::hex << std::uppercase << x;
             return ss.str();
