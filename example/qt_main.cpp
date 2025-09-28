@@ -32,9 +32,24 @@ int main(int argc, char *argv[])
     ICANInterface* transport = new SocketCAN();
     // Using ELM327 protocol
     //ICANInterface* transport = new ELM327Transport(B38400, '0');
+    transport->setTimeout(500);
     
     std::string connection = transport->init(interfaceName)? "Connected": "Disconnected";
+
     OBD2Scanner obd(transport);
+
+    // --- Lable 0: Protocol ---
+    {
+        QHBoxLayout *row = new QHBoxLayout;
+        QLabel *label = new QLabel("No data yet");
+        row->addWidget(label);
+
+        auto res = obd.getProtocol();
+        res = "Protocol: " + res;
+        label->setText(QString::fromStdString(res));
+
+        mainLayout->addLayout(row);
+    }
 
     // --- Button 0: Init ---
     {
@@ -79,6 +94,8 @@ int main(int argc, char *argv[])
 
     // Shared combo box
     QComboBox *comboBox = new QComboBox();
+    QComboBox *comboBox2 = new QComboBox();
+
 
     // --- Button 2: Get supported PIDs ---
     {
@@ -89,15 +106,21 @@ int main(int argc, char *argv[])
         row->addWidget(button);
         row->addWidget(label);
 
-        QObject::connect(button, &QPushButton::clicked, [label, comboBox, &obd]() {
-            QtConcurrent::run([label, comboBox, &obd]() {
-                obd.getPid(OBD2::Pid::Supported0, [label, comboBox](const std::vector<DecodedItem>& res) {
-                    QMetaObject::invokeMethod(label, [label, comboBox, res]() {
+        QObject::connect(button, &QPushButton::clicked, [label,comboBox ,comboBox2, &obd]() {
+            QtConcurrent::run([label, comboBox, comboBox2, &obd]() {
+                obd.getPid(OBD2::Pid::Supported0, [label, comboBox, comboBox2](const std::vector<DecodedItem>& res) {
+                    QMetaObject::invokeMethod(label, [label, comboBox, comboBox2, res]() {
                         label->setText(vectorToQString(res));
 
                         comboBox->clear();
+                        comboBox2->clear();
+
                         for (const auto &item : res) {
                             comboBox->addItem(
+                                QString("PID %1").arg(item.value.c_str()),
+                                QVariant::fromValue(item.value) // store real enum
+                            );
+                            comboBox2->addItem(
                                 QString("PID %1").arg(item.value.c_str()),
                                 QVariant::fromValue(item.value) // store real enum
                             );
@@ -126,7 +149,6 @@ int main(int argc, char *argv[])
 
             // Retrieve real PID enum directly
             uint8_t pid = static_cast<uint8_t>(std::stoi(comboBox->currentData().value<std::string>()));
-            LOG_INFO(std::to_string(pid));
 
             QtConcurrent::run([label, pid, &obd]() {
                 obd.getPid(pid, [label](const std::vector<DecodedItem>& res) {
@@ -146,11 +168,23 @@ int main(int argc, char *argv[])
         QPushButton *button = new QPushButton("Get Freeze Frame");
         QLabel *label = new QLabel("No data yet");
         row->addWidget(button);
+        row->addWidget(comboBox2);
         row->addWidget(label);
 
-        QObject::connect(button, &QPushButton::clicked, [label, &obd]() {
-            auto res = obd.getFreezFrame(OBD2::Pid::CoolantTemp);
-            label->setText(vectorToQString(res));
+        QObject::connect(button, &QPushButton::clicked, [label, comboBox2, &obd]() {
+            int index = comboBox2->currentIndex();
+            if (index < 0) return;
+
+            // Retrieve real PID enum directly
+            uint8_t pid = static_cast<uint8_t>(std::stoi(comboBox2->currentData().value<std::string>()));
+
+            QtConcurrent::run([label, pid, &obd]() {
+                obd.getFreezFrame(pid, [label](const std::vector<DecodedItem>& res) {
+                    QMetaObject::invokeMethod(label, [label, res]() {
+                        label->setText(vectorToQString(res));
+                    });
+                });
+            });
         });
 
         mainLayout->addLayout(row);

@@ -38,7 +38,7 @@ class GenerateFrame {
         void PermanentDTCs();
     
     private:
-        void SendFrame(uint32_t id, MOD mode, int pid = -1);
+        void SendFrame(uint32_t id, MOD mode, int pid = -1, int extraData = -1);
 
 };
 

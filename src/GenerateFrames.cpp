@@ -9,7 +9,7 @@ void GenerateFrame::ShowCurrentData(uint8_t pid){
 
 void GenerateFrame::ShowFreezFrameData(uint8_t pid) {
     LOG_INFO("Client requested ShowFreezFrameData");
-    SendFrame(broadcast_id, MShowFreezFrameData, pid);
+    SendFrame(broadcast_id, MShowFreezFrameData, pid, 0x00);
 
 }
 void GenerateFrame::ShowDTCs() {
@@ -58,18 +58,23 @@ void logCanFrame(const can_frame &frame) {
 }
 
 
-void GenerateFrame::SendFrame(uint32_t id, MOD mode, int pid) {
+void GenerateFrame::SendFrame(uint32_t id, MOD mode, int pid, int extraData) {
 
     can_frame frame;
 
     frame.can_id = id;
     frame.can_dlc = 8;
     frame.data[0] = (pid == -1)? 1: 2;
+    frame.data[0] = (extraData == -1)? frame.data[0]: 3;
     frame.data[1] = mode;
     frame.data[2] = (pid == -1)? 0: pid;
 
     for (int i = 3; i < 8; i++) {
         frame.data[i] = 0x0;
+    }
+
+    if (extraData != -1) {
+        frame.data[3] = extraData;
     }
 
     if (s->send(frame)) {

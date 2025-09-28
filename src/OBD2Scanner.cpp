@@ -261,6 +261,26 @@ void OBD2Scanner::ClearDTCs(std::function<void(const std::vector<DecodedItem>&)>
     callback({{00,00,"No response", "-1"}});
 }
 
+std::string OBD2Scanner::getProtocol() {
+    uint16_t protocol_code = transport->getProtocol() - '0';
+    std::string list_of_protocolsp[] = {
+        "Auto",
+        "SAE J1850 PWM",
+        "SAE J1850 VPW",
+        "ISO 9141-2",
+        "ISO 14230-4 KWP",
+        "ISO 14230-4 KWP (fast init)",
+        "ISO 15765-4 CAN (11 bit, 500 kbps)",
+        "ISO 15765-4 CAN (29 bit, 500 kbps)",
+        "ISO 15765-4 CAN (11 bit, 250 kbps)",
+        "ISO 15765-4 CAN (29 bit, 250 kbps)"
+    };
+    if (protocol_code <=9) {
+        return list_of_protocolsp[protocol_code];
+    }
+    return "Not identified";
+}
+
 OBD2Scanner::~OBD2Scanner() {
     delete receiver;
     delete generator;

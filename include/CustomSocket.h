@@ -60,6 +60,7 @@
         virtual bool send(const can_frame& frame) = 0;
         virtual bool receive(can_frame& frame) = 0;
         virtual void setTimeout(int timeoutMs) = 0;
+        virtual char getProtocol() = 0;
         virtual ~ICANInterface() = default;
     };
 
@@ -76,6 +77,8 @@
         void setTimeout(int timeoutMs) override;
 
         bool isOBD2(can_frame& frame);
+
+        char getProtocol();
 
         ~SocketCAN() override;
     };
@@ -112,6 +115,8 @@
 
         // Only receives a frame
         bool receive(can_frame& frame) override;
+
+        char getProtocol();
 
         void closePort();
 

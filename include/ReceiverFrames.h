@@ -34,9 +34,9 @@ class Mode1: public IObd2Modes {
 
 };
 
-/* Mode 2 differs from Mode 1 only by the mode byte.
- To avoid duplicated code, it’s best to use class inheritance */
-class Mode2: public Mode1 {
+class Mode2: public IObd2Modes {
+    public:
+        std::vector<DecodedItem> Decodify() override;
 };
 
 class Mode3: public IObd2Modes {

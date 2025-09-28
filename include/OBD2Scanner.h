@@ -98,6 +98,8 @@ class OBD2Scanner {
         void getPendingDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> ClearDTCs();
         void ClearDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+
+        std::string getProtocol();
         
         ~OBD2Scanner();
 };

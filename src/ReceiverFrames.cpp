@@ -106,7 +106,7 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
     totalLength += 1;
     if (mode) return true;
-
+    LOG_INFO("False");
     return false;
 }
 
@@ -131,6 +131,32 @@ std::vector<DecodedItem> Mode1::Decodify() {
     // Unknown PID
     std::vector<DecodedItem> r;
     r.push_back({0x01,pid, "Erro: Not found", "1"});
+    return r;
+}
+
+/*  ______________________________________
+    |_Byte_|_____0__1__2__3__4__5__6__7__|
+    | Frame| 7E8#04 42 0D 00 12 AA AA AA |
+*/
+std::vector<DecodedItem> Mode2::Decodify() {
+    uint8_t pid = responseBuffer[1];
+    uint8_t frame = responseBuffer[2];
+    uint8_t* new_data = responseBuffer + 3;
+    uint8_t len = receivedBytes - 2;
+
+    // Same pids as Mode1
+    const PIDEntry* pidTable = Mode1Pid().getTable();
+    uint8_t pidTableSize = Mode1Pid().pidTableSize;
+
+    for (size_t i = 0; i < pidTableSize; ++i) {
+        if (pidTable[i].pid == pid) {
+            return pidTable[i].decoder(new_data, len);
+        }
+    }
+
+    // Unknown PID
+    std::vector<DecodedItem> r;
+    r.push_back({0x02,pid, "Erro: Not found", "1"});
     return r;
 }
 

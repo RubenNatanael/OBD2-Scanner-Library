@@ -89,6 +89,11 @@ bool SocketCAN::isOBD2(can_frame& frame) {
     return false;
 }
 
+char SocketCAN::getProtocol() {
+    // TODO
+    return '6';
+}
+
 ELM327Transport::ELM327Transport(speed_t baudRate, char protocol) : baudRate(baudRate), protocol(protocol) {}
 
 ELM327Transport::~ELM327Transport() { closePort(); }
@@ -127,16 +132,16 @@ void ELM327Transport::sendRaw(const std::string& cmd) {
     write(fd, cmd.c_str(), cmd.size());
 }
 
-std::string ELM327Transport::read_until_prompt(int timeoutSeconds) {
+std::string ELM327Transport::read_until_prompt(int timeoutMiliSeconds) {
     std::string out;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMiliSeconds);
     char buf[128];
 
     while (std::chrono::steady_clock::now() < deadline) {
         ssize_t n = read(fd, buf, sizeof(buf));
         if (n > 0) {
             out.append(buf, buf + n);
-            deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
+            deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMiliSeconds);
             if (out.find('>') != std::string::npos) break;
         }
         else {
@@ -149,25 +154,25 @@ std::string ELM327Transport::read_until_prompt(int timeoutSeconds) {
 bool ELM327Transport::initChip() {
 
     sendRaw("ATZ\r");   // reset
-    std::string r = read_until_prompt(5);
+    std::string r = read_until_prompt(5000);
     LOG_INFO("ATZ -> " + r);
     usleep(1000000);
 
 
     sendRaw("ATE0\r");  // disable echo (prevents duplicates)
-    r = read_until_prompt(5);
+    r = read_until_prompt(5000);
     LOG_INFO("ATE0 -> " + r);
     usleep(1000000);
 
 
     sendRaw("ATL0\r");  // disable new line
-    r = read_until_prompt(5);
+    r = read_until_prompt(5000);
     LOG_INFO("ATL0 -> " + r);
     usleep(1000000);
 
     std::string command = "ATSP" + std::string(1, protocol);
     sendRaw(command + "\r"); // set protocol
-    r = read_until_prompt(5);
+    r = read_until_prompt(5000);
     LOG_INFO(command + " -> " + r);
 
     /* 
@@ -187,7 +192,7 @@ bool ELM327Transport::initChip() {
     for (int i = 0; i < 7; i++) {
         usleep(2000000);
         sendRaw("0100\r");
-        std::string resp = read_until_prompt(3);
+        std::string resp = read_until_prompt(3000);
         LOG_INFO("Test PID -> " + resp);
 
         if (resp.find("41 00") != std::string::npos) {
@@ -261,7 +266,7 @@ bool ELM327Transport::send(const can_frame &frame) {
     for (int i = 1; i <= frame.data[0]; ++i) {
         payload << std::setw(2) << (static_cast<int>(frame.data[i]) & 0xFF);
     }
-
+    
     payload << "\r";
     LOG_INFO(payload.str());
     sendRaw(payload.str());
@@ -273,7 +278,7 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
     outPayload.clear();
     if (fd < 0) return false;
 
-    std::string raw = read_until_prompt(5);
+    std::string raw = read_until_prompt(timeoutMs);
     if (raw.empty()) return false;
 
     raw.erase(std::remove(raw.begin(), raw.end(), '>'), raw.end());
@@ -404,6 +409,12 @@ bool ELM327Transport::receive(can_frame& frame) {
         return true;
     }
     return false;
+}
+
+char ELM327Transport::getProtocol() {
+    sendRaw("ATDPN");
+    char res = read_until_prompt(timeoutMs)[0];
+    return res;
 }
 
 
