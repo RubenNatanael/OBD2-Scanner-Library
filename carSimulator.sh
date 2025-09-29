@@ -16,7 +16,7 @@ candump vcan0 | while read -r line; do
             cansend vcan0 7E1#0641${third_byte}983BA013
             ;;
         "02")
-            cansend vcan0 7E1#0642${third_byte}00010204
+            cansend vcan0 7E1#0742${third_byte}00983BA013
             ;;
         "03")
             cansend vcan0 7E1#06430207450744

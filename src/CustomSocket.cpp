@@ -174,6 +174,12 @@ bool ELM327Transport::initChip() {
     sendRaw(command + "\r"); // set protocol
     r = read_until_prompt(5000);
     LOG_INFO(command + " -> " + r);
+    usleep(1000000);
+
+    sendRaw("ATSWAA\r");  // set wakeup
+    r = read_until_prompt(5000);
+    LOG_INFO("ATSWAA -> " + r);
+    usleep(1000000);
 
     /* 
         TODO: Need to activate raw mode and   AT CFC0 to manage manually multi frame.
@@ -253,14 +259,6 @@ bool ELM327Transport::send(const can_frame &frame) {
 
     if (fd < 0) return false;
 
- 
-    // std::string r;
-    // if (frame.can_id != last_id) {
-    //     std::string sh = "AT SH " + to_upper_hex(frame.can_id) + "\r";
-    //     sendRaw(sh);
-    //     r = read_until_prompt(1);
-    // }
-
     std::ostringstream payload;
     payload << std::uppercase << std::hex << std::setfill('0');
     for (int i = 1; i <= frame.data[0]; ++i) {
@@ -292,6 +290,10 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
     while (iss >> tok) {
 
         size_t start = 0;
+        // Skip tokens that are just frame numbers like "0:" or "1:"
+        if (tok.size() == 2 && isdigit(tok[0]) && tok[1] == ':') {
+            continue;
+        }
         while (start < tok.size() && !isxdigit((unsigned char)tok[start])) ++start;
         size_t end = tok.size();
         while (end > start && !isxdigit((unsigned char)tok[end-1])) --end;
@@ -332,9 +334,7 @@ bool ELM327Transport::readFullResponse(std::vector<uint8_t>& outPayload) {
 }
 
 void ELM327Transport::splitPayloadIntoFrames(const std::vector<uint8_t>& payload) {
-
     frameQueue = {};
-
     size_t totalLength = payload.size();
     size_t pos = 0;
     uint8_t seq = 1;
@@ -342,35 +342,33 @@ void ELM327Transport::splitPayloadIntoFrames(const std::vector<uint8_t>& payload
     if (totalLength == 0) return;
 
     if (totalLength <= 7) {
+        // Single Frame
         can_frame frame{};
-        frame.can_id = 0x7E8;
-        frame.can_dlc = static_cast<__u8>(totalLength + 1);
-        frame.data[0] = static_cast<uint8_t>(totalLength & 0xFF);
+        frame.can_id = 0x7E0; // send to ECU
+        frame.can_dlc = static_cast<uint8_t>(totalLength + 1);
+        frame.data[0] = static_cast<uint8_t>(0x00 | (totalLength & 0x0F)); // SF PCI
         std::memcpy(frame.data + 1, payload.data(), totalLength);
         frameQueue.push(frame);
     } else {
-        // First frame 
+        // First Frame
         can_frame firstFrame{};
-        firstFrame.can_id = 0x7E8;
+        firstFrame.can_id = 0x7E0; // send to ECU
         firstFrame.can_dlc = 8;
-        firstFrame.data[0] = static_cast<uint8_t>(0x10 | ((totalLength >> 8) & 0x0F));
+        firstFrame.data[0] = static_cast<uint8_t>(0x10 | ((totalLength >> 8) & 0x0F)); // FF PCI
         firstFrame.data[1] = static_cast<uint8_t>(totalLength & 0xFF);
-        size_t firstChunk = std::min<size_t>(6, totalLength);
+        size_t firstChunk = 6;
         std::memcpy(firstFrame.data + 2, payload.data(), firstChunk);
-        if (firstChunk < 6) {
-            std::memset(firstFrame.data + 2 + firstChunk, 0x00, 6 - firstChunk);
-        }
         frameQueue.push(firstFrame);
         pos = firstChunk;
 
         // Consecutive frames
         while (pos < totalLength) {
             can_frame cf{};
-            cf.can_id = 0x7E8;
+            cf.can_id = 0x7E0; // send to ECU
             size_t chunkSize = std::min<size_t>(7, totalLength - pos);
-            cf.data[0] = static_cast<uint8_t>(0x20 | (seq & 0x0F));
+            cf.data[0] = static_cast<uint8_t>(0x20 | (seq & 0x0F)); // CF PCI
             std::memcpy(cf.data + 1, payload.data() + pos, chunkSize);
-            cf.can_dlc = static_cast<__u8>(chunkSize + 1);
+            cf.can_dlc = static_cast<uint8_t>(chunkSize + 1);
             if (chunkSize < 7) std::memset(cf.data + 1 + chunkSize, 0x00, 7 - chunkSize);
             frameQueue.push(cf);
             pos += chunkSize;
@@ -379,6 +377,7 @@ void ELM327Transport::splitPayloadIntoFrames(const std::vector<uint8_t>& payload
         }
     }
 }
+
 
 bool ELM327Transport::receive(can_frame& frame) {
 
@@ -393,19 +392,17 @@ bool ELM327Transport::receive(can_frame& frame) {
     std::vector<uint8_t> payload;
     if (!readFullResponse(payload)) return false;
 
+    std::string data = "";
+    for (auto hex: payload) {
+        data += std::to_string(hex) + " ";
+    }
+
     splitPayloadIntoFrames(payload);
 
     if (!frameQueue.empty()) {
         frame = frameQueue.front();
         frameQueue.pop();
-        LOG_INFO("Frame: " + std::to_string(frame.data[0]) + " "
-                       + std::to_string(frame.data[1]) + " "
-                       + std::to_string(frame.data[2]) + " "
-                       + std::to_string(frame.data[3]) + " "
-                       + std::to_string(frame.data[4]) + " "
-                       + std::to_string(frame.data[5]) + " "
-                       + std::to_string(frame.data[6]) + " "
-                       + std::to_string(frame.data[7]));
+        LOG_INFO("Frame: " + data);
         return true;
     }
     return false;

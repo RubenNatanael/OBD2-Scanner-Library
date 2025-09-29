@@ -96,6 +96,8 @@ class OBD2Scanner {
         void getPermanentDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> getPendingDTCs();
         void getPendingDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+        std::vector<DecodedItem> getVehicleInfo(uint8_t pid);
+        void getVehicleInfo(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
         std::vector<DecodedItem> ClearDTCs();
         void ClearDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
 

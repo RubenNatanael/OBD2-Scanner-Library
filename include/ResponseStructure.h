@@ -12,4 +12,11 @@ struct DecodedItem {
     bool valid = true;
 };
 
+using DecoderFunc = std::vector<DecodedItem> (*)(const uint8_t* data, uint8_t len);
+
+struct PIDEntry {
+    uint8_t pid;
+    DecoderFunc decoder;
+};
+
 #endif

@@ -4,6 +4,7 @@
 #include "CustomSocket.h"
 #include "MultiLogger.h"
 #include "Mode1Pids.h"
+#include "Mode9Pids.h"
 #include "TroubleCodes.h"
 #include "ResponseStructure.h"
 
@@ -61,6 +62,12 @@ class Mode4: public IObd2Modes {
 
 };
 
+class Mode9: public IObd2Modes {
+    public:
+        std::vector<DecodedItem> Decodify() override;
+
+};
+
 class ModeDefault: public IObd2Modes {
     public:
         std::vector<DecodedItem> Decodify() override;
@@ -73,9 +80,10 @@ public:
     Mode1 mode1;
     Mode2 mode2;
     Mode3 mode3;
-    Mode7 mode7;
-    ModeA modeA;
     Mode4 mode4;
+    Mode7 mode7;
+    Mode9 mode9;
+    ModeA modeA;
     ModeDefault modeDefault;
 private:
     IObd2Modes* currentMode = nullptr;

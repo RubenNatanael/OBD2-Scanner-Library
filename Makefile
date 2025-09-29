@@ -6,6 +6,7 @@ LIB_SRC := src/CustomSocket.cpp \
            src/GenerateFrames.cpp \
            src/ReceiverFrames.cpp \
            src/Mode1Pids.cpp \
+           src/Mode9Pids.cpp \
            src/TroubleCodes.cpp \
            src/OBD2Scanner.cpp
 LIB_OBJ := $(LIB_SRC:.cpp=.o)

@@ -7,13 +7,6 @@
 #include "TroubleCodes.h"
 #include "ResponseStructure.h"
 
-using DecoderFunc = std::vector<DecodedItem> (*)(const uint8_t* data, uint8_t len);
-
-struct PIDEntry {
-    uint8_t pid;
-    DecoderFunc decoder;
-};
-
 /* Mode1Pid class can be use by both, mode1 and mode 2*/
 class Mode1Pid {
 private:

@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     // Using socket CAN
     ICANInterface* transport = new SocketCAN();
     // Using ELM327 protocol
-    //ICANInterface* transport = new ELM327Transport(B38400, '0');
+    //ICANInterface* transport = new ELM327Transport(B38400, '6');
     transport->setTimeout(500);
     
     std::string connection = transport->init(interfaceName)? "Connected": "Disconnected";
@@ -86,6 +86,22 @@ int main(int argc, char *argv[])
 
         QObject::connect(button, &QPushButton::clicked, [label, &obd]() {
             auto res = obd.getDTCs();
+            label->setText(vectorToQString(res));
+        });
+
+        mainLayout->addLayout(row);
+    }
+
+    // --- Button 1.5: Get DTCs ---
+    {
+        QHBoxLayout *row = new QHBoxLayout;
+        QPushButton *button = new QPushButton("Get VIN");
+        QLabel *label = new QLabel("No data yet");
+        row->addWidget(button);
+        row->addWidget(label);
+
+        QObject::connect(button, &QPushButton::clicked, [label, &obd]() {
+            auto res = obd.getVehicleInfo(0x02);
             label->setText(vectorToQString(res));
         });
 

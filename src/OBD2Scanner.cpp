@@ -220,6 +220,47 @@ void OBD2Scanner::getPermanentDTCs(std::function<void(const std::vector<DecodedI
     callback({{00,00,"No response", "-1"}});
 }
 
+std::vector<DecodedItem> OBD2Scanner::getVehicleInfo(uint8_t pid) {
+    generator->RequestVehicleInformation(pid);
+    auto startTime = std::chrono::steady_clock::now();
+    auto timeout = std::chrono::milliseconds(1000);
+    while (true)
+    {
+        IObd2Modes* mode = receiver->ReceiveFrames();
+        if (mode == &receiver->mode9) {
+                return mode->Decodify();
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        if (now - startTime >= timeout) {
+            LOG_ERR("Timeout waiting for PID response");
+            break;
+        }
+    }
+    return {{0x09,pid,"No response", "-1"}};
+}
+
+void OBD2Scanner::getVehicleInfo(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback) {
+    generator->RequestVehicleInformation(pid);
+    auto startTime = std::chrono::steady_clock::now();
+    auto timeout = std::chrono::milliseconds(1000);
+    while (true)
+    {
+        IObd2Modes* mode = receiver->ReceiveFrames();
+        if (mode == &receiver->mode9) {
+                callback(mode->Decodify());
+                return;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        if (now - startTime >= timeout) {
+            LOG_ERR("Timeout waiting for PID response");
+            break;
+        }
+    }
+    callback({{0x09,pid,"No response", "-1"}});
+}
+
 std::vector<DecodedItem> OBD2Scanner::ClearDTCs() {
     generator->ClearDTCs();
     auto startTime = std::chrono::steady_clock::now();

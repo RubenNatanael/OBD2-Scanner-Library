@@ -14,6 +14,7 @@ IObd2Modes* ReceiverFrames::ReceiveFrames() {
         case 0x42: currentMode = &mode2; LOG_INFO("Mode2 recognized"); break;
         case 0x43: currentMode = &mode3; LOG_INFO("Mode3 recognized"); break;
         case 0x47: currentMode = &mode7; LOG_INFO("Mode7 recognized"); break;
+        case 0x49: currentMode = &mode9; LOG_INFO("Mode9 recognized"); break;
         case 0x4A: currentMode = &modeA; LOG_INFO("Mode0A recognized"); break;
         case 0x44: currentMode = &mode4; LOG_INFO("Mode4 recognized"); break;
         default: currentMode = &modeDefault; LOG_WARN("Can frame is not an OBD2 message"); break;
@@ -106,7 +107,6 @@ bool ReceiverFrames::readAndAssembleFrames() {
 
     totalLength += 1;
     if (mode) return true;
-    LOG_INFO("False");
     return false;
 }
 
@@ -232,6 +232,30 @@ std::vector<DecodedItem> Mode4::Decodify() {
         r.push_back({0x04,0x0,"Error", "-1"});
     }
     
+    return r;
+}
+
+/*  ______________________________________
+    |_Byte_|_____0__1__2__3__4__5__6__7__|
+    | Frame| 7E8#03 49 00 12 AA AA AA AA |
+*/
+std::vector<DecodedItem> Mode9::Decodify() {
+    uint8_t pid = responseBuffer[1];
+    uint8_t* new_data = responseBuffer + 2;
+    uint8_t len = receivedBytes - 1;
+
+    const PIDEntry* pidTable = Mode9Pid().getTable();
+    uint8_t pidTableSize = Mode9Pid().pidTableSize;
+
+    for (size_t i = 0; i < pidTableSize; ++i) {
+        if (pidTable[i].pid == pid) {
+            return pidTable[i].decoder(new_data, len);
+        }
+    }
+
+    // Unknown PID
+    std::vector<DecodedItem> r;
+    r.push_back({0x01,pid, "Erro: Not found", "1"});
     return r;
 }
 
