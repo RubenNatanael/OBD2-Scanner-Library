@@ -25,6 +25,9 @@ candump vcan0 | while read -r line; do
         "07")
             cansend vcan0 7E1#0747074507440746
             ;;
+        "09")
+            cansend vcan0 7E1#074902015750305A5A5A
+            ;;
         "0A")
             cansend vcan0 7E1#074A074507440746
             ;;
