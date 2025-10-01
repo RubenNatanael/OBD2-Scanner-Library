@@ -77,33 +77,125 @@ namespace OBD2 {
 
 } // namespace OBD2
 
-
+/**
+ * @class OBD2Scanner
+ * @brief Provides an interface to scan and retrieve vehicle diagnostic information via OBD-II protocol.
+ *
+ * This class uses a CAN transport interface to communicate with the vehicle's ECU and provides
+ * methods to retrieve diagnostic trouble codes (DTCs), freeze frame data, vehicle information, and more.
+ */
 class OBD2Scanner {
+    ICANInterface* transport;    ///< Transport interface for CAN communication
+    GenerateFrame* generator;    ///< Helper class for generating OBD-II request frames
+    ReceiverFrames* receiver;    ///< Helper class for receiving and parsing OBD-II responses
 
-    ICANInterface* transport;
-    GenerateFrame* generator;
-    ReceiverFrames* receiver;
+public:
+    /**
+     * @brief Constructor for OBD2Scanner
+     * @param transporter Pointer to an ICANInterface used for vehicle communication
+     */
+    OBD2Scanner(ICANInterface *transporter);
 
-    public:
-        OBD2Scanner(ICANInterface *transporter);
-        std::vector<DecodedItem> getPid(uint8_t pid);
-        void getPid(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
-        std::vector<DecodedItem> getDTCs();
-        void getDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
-        std::vector<DecodedItem> getFreezFrame(uint8_t pid);
-        void getFreezFrame(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
-        std::vector<DecodedItem> getPermanentDTCs();
-        void getPermanentDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
-        std::vector<DecodedItem> getPendingDTCs();
-        void getPendingDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
-        std::vector<DecodedItem> getVehicleInfo(uint8_t pid);
-        void getVehicleInfo(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
-        std::vector<DecodedItem> ClearDTCs();
-        void ClearDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+    /**
+     * @brief Request a PID (Parameter ID) synchronously
+     * @param pid The OBD-II PID to request
+     * @return A vector of decoded items containing the PID response
+     */
+    std::vector<DecodedItem> getPid(uint8_t pid);
 
-        std::string getProtocol();
-        
-        ~OBD2Scanner();
+    /**
+     * @brief Request a PID asynchronously
+     * @param pid The OBD-II PID to request
+     * @param callback Function to call with the decoded result
+     */
+    void getPid(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Retrieve stored Diagnostic Trouble Codes (DTCs)
+     * @return A vector of decoded DTCs
+     */
+    std::vector<DecodedItem> getDTCs();
+
+    /**
+     * @brief Retrieve stored Diagnostic Trouble Codes (DTCs) asynchronously
+     * @param callback Function to call with the decoded DTCs
+     */
+    void getDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Retrieve freeze frame data for a given PID
+     * @param pid The PID for which freeze frame data is requested
+     * @return A vector of decoded freeze frame data
+     */
+    std::vector<DecodedItem> getFreezFrame(uint8_t pid);
+
+    /**
+     * @brief Retrieve freeze frame data asynchronously
+     * @param pid The PID for which freeze frame data is requested
+     * @param callback Function to call with the decoded data
+     */
+    void getFreezFrame(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Retrieve permanent Diagnostic Trouble Codes (DTCs)
+     * @return A vector of permanent DTCs
+     */
+    std::vector<DecodedItem> getPermanentDTCs();
+
+    /**
+     * @brief Retrieve permanent DTCs asynchronously
+     * @param callback Function to call with the permanent DTCs
+     */
+    void getPermanentDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Retrieve pending Diagnostic Trouble Codes (DTCs)
+     * @return A vector of pending DTCs
+     */
+    std::vector<DecodedItem> getPendingDTCs();
+
+    /**
+     * @brief Retrieve pending DTCs asynchronously
+     * @param callback Function to call with the pending DTCs
+     */
+    void getPendingDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Retrieve vehicle information based on a given PID
+     * @param pid The vehicle information PID to request
+     * @return A vector of decoded vehicle info
+     */
+    std::vector<DecodedItem> getVehicleInfo(uint8_t pid);
+
+    /**
+     * @brief Retrieve vehicle information asynchronously
+     * @param pid The vehicle information PID to request
+     * @param callback Function to call with the decoded info
+     */
+    void getVehicleInfo(uint8_t pid, std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Clear stored Diagnostic Trouble Codes (DTCs)
+     * @return A vector of decoded response items
+     */
+    std::vector<DecodedItem> ClearDTCs();
+
+    /**
+     * @brief Clear DTCs asynchronously
+     * @param callback Function to call with the response
+     */
+    void ClearDTCs(std::function<void(const std::vector<DecodedItem>&)> callback);
+
+    /**
+     * @brief Get the current communication protocol
+     * @return A string representing the protocol (e.g., "ISO 15765-4 (CAN)")
+     */
+    std::string getProtocol();
+
+    /**
+     * @brief Destructor for OBD2Scanner
+     */
+    ~OBD2Scanner();
 };
 
 #endif

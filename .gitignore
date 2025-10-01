@@ -3,3 +3,5 @@ dtcmapping.json
 script.py
 *.o
 *.a
+docs/html/
+docs/latex/
